@@ -1,0 +1,16 @@
+ByteArrayOutputStream
+ByteArrayInputStream
+
+ObjectInputStream
+ObjectOuputStream
+
+FileInputStream
+FileOutputStream
+
+BufferedOutputStream
+BufferedInputStream
+
+
+适配器模式
+--------------
+	

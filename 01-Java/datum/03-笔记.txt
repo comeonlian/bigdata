@@ -1,0 +1,148 @@
+﻿传输层			
+-----------
+	tcp		//连接,三次握手。完成两次身份识别。
+	udp		//无连接,无固定路由。
+
+应用层
+------------
+	http
+	https
+	ftp
+	smtp
+
+
+ip:端口
+----------------
+	ip:
+	ip + port 
+
+
+InetAddress
+-----------------
+	只有地址,没有端口.
+
+InetSocketAddrss
+-------------------
+	有地址，有端口
+	InetSocketAddress(InetAddress addr, int port)
+
+Socket
+-----------
+	DatagramSocket		//数据报套接字。
+
+
+UdpSender
+-------------------
+	发送放在每个pack中指定地址，其中255是统配ip。
+	DatagramSocket socket = new DatagramSocket(9999);
+	
+	int i= 0 ;
+	for(;;){
+		//构造数据缓冲数组，形成数据报包
+		byte[] bytes = ("hello world " + i ++).getBytes() ;
+		//byte[] bytes = new byte[1024 * 63];
+		DatagramPacket pack = new DatagramPacket(bytes, bytes.length);
+
+		//192.168.12.255是通配ip
+		pack.setSocketAddress(new InetSocketAddress("192.168.12.255", 8888));
+		socket.send(pack);
+		Thread.sleep(500);
+	}
+
+/**
+ * 接受方
+ */
+UdpReceiver
+--------------------
+	DatagramSocket sock = new DatagramSocket(8888);
+	byte[] buf = new byte[1024];
+	DatagramPacket pack = new DatagramPacket(buf, buf.length);
+	while(true){
+		sock.receive(pack);
+		int dataLen = pack.getLength();
+		String str = new String(buf,0,dataLen);
+		System.out.println("收到了 : " + str);
+	}
+
+
+
+屏广
+--------------	
+	[设计报头]
+	dest + port
+	byte[]
+
+
+class A{
+	..
+	...
+}
+
+class WrapA extends A{
+	private A a ;
+
+	public WrapA(A a ){
+		this.a = a ;
+	}
+
+	public void close(){
+		pool.add(a);
+	}
+}
+
+
+A a = new A();
+WrapA wa = new WrapA(a);
+
+
+
+装饰模式
+--------------
+	
+[80, 75, 3, 4, 20, 0, 8, 8, 8, 0, 9, 122, 102, 74, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+[80, 75, 3, 4, 20, 0, 8, 8, 8, 0, 9, 122, 102, 74, 0, 0, 0, 0, 0,
+
+
+UDP
+-----------
+
+单工		//单向传输/.
+双工		//双向通信
+---------
+	1.半双工	//
+	2.全双工	//
+
+
+互联网的访问模式
+-----------------
+	1.push
+		
+	2.pull
+		
+GOF
+---------------
+	gang of four,四人帮.
+	23.
+	单例模式:		//饿汉 | 懒汉式
+	多例模式:		//池化模式.
+
+	工厂模式:		//静态的。
+	装饰模式		//BufferedInputStream
+	适配器模式		//预实现
+
+
+TCP
+-------------
+	QQ:
+	Socket		//
+	ServerSocket		//服务器端套接字
+	Socket				//套接字
+
+
+作业
+----------------------
+	1.编程是屏广。
+		
+	2.
+	3.
+	4.
