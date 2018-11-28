@@ -1,0 +1,342 @@
+hadoop
+--------------
+	分布式计算框架。
+
+	common		//
+	hdfs		//存储
+	mapreduce	//MR,编程模型.
+	yarn		//资源调度.
+
+集群部署
+-----------
+	1.standard alone/local
+		nothing.
+	2.伪分布式
+		一台机器.
+		NN			//目录
+		DN			//DataNode,block（128M）
+					//
+		RM
+		NM
+		2NN
+	3.
+	4.
+	5.
+
+jar
+
+项目管理
+--------------------
+	pom.xml
+	artifact		//
+
+
+
+安装maven
+----------------
+	项目管理软件。
+	软件之间的依赖关系。
+	${user_hoime}/.m2
+	[windows]
+	1.加压即可
+		不要放中文或空格目录。
+	2.配置环境变量.
+		M2_HOME=c:\myprograme\apache-maven-3.3.9
+		PATH=...;%M2_HOME%\bin
+	
+	3.验证是否安装成功
+		cmd>mvn -v
+
+	4.修改默认的仓库位置
+		[${maven_home}/conf/setttings.xml]
+		<settings ...>
+			...
+			<localRepository>e:/repo</localRepository>
+			...
+		</settings>
+
+	5.配置idea使用指定settings.xml文件.
+		
+
+	
+	[Centos]
+	1.tar开文件
+		/soft/apache-maven-3.3.9
+		/soft/maven --> maven-3.3.9
+	2.配置环境
+		[/etc/profile]
+		M2_HOME=/soft/maven
+		PATH=$PATH:$M2_HOME/bin
+
+	3.验证是否成功
+		$>mvn -v
+
+
+安转idea
+-----------------
+	1.右键点击ideaIU-2016.3.2.exe文件，选择管理员身份运行.
+	2.打开idea.
+	3.
+	4.
+	5.
+
+
+依赖
+-------------
+<dependency>
+	<!-- 组id,解析成目录org/apache/hadoop/hadoop-hdfs/2.7.3 -->
+    <groupId>org.apache.hadoop</groupId>
+	<!-- 工件id -->
+    <artifactId>hadoop-hdfs</artifactId>
+	<!-- 版本 -->
+    <version>2.7.3</version>
+</dependency>
+
+
+
+	eclipse			idea
+--------------------------
+	工作空间		项目
+	项目			模块
+
+
+
+
+hadoop
+--------------
+	http://s201:50070/
+
+
+1073742863 == 134217728
+1073742864 == 79874467
+
+
+hdfs常见操作
+-------------------
+	1.查看hdfs帮助
+		$>hdfs
+	2.hdfs  dfs
+
+	3.hdfs
+
+配置hadoop的最小blocksize，必须是512的倍数。
+-------------------------------------------
+	[hdfs-site.xml]
+	dfs.namenode.fs-limits.min-block-size=1024
+	write,进行校验，512进行一次教研。
+
+
+单独配置辅助名称节点
+---------------------
+	[hdfs-site.xml]
+	dfs.namenode.secondary.http-address=s206:50090
+
+使用oiv命令查询hadoop镜像文件
+------------------------------
+	hdfs oiv -i fsimage -o a.xml -p XML			//查看镜像文件。
+
+
+hdfs dfsadmin管理命令
+----------------------
+	$>hdfs dfsadmin					//查看帮助
+	$>hdfs dfsadmin	-help rollEdits	//查看指定命令的帮助
+	$>hdfs dfsadmin -rollEdits		//滚动编辑日志
+	
+
+启动hdfs时，镜像文件编辑日志进行融合，编辑日志滚动。
+
+查看hdfs是否在安全模式
+------------------------
+	$>hdfs dfsadmin -safemode  enter		//进入
+	$>hdfs dfsadmin -safemode  get			//查看
+	$>hdfs dfsadmin -safemode  leave		//退出
+	$>hdfs dfsadmin -safemode  wait			//等待
+
+
+hadoop 
+--------------------
+	$>hadoop fs					//hdfs dfs
+	$>hadoop checknative		//检查压缩库本地安装情况
+	$>hadoop namenode -format	//格式化名称
+
+
+hdfs管理命令
+--------------------
+	hdfs dfsadmin				//
+
+保存名字空间,需要进入安全模式
+--------------------------------
+	$>hdfs dfsamdin -saveNamespace
+
+hadoop启动命令
+------------------
+	$>start-all.sh		//start-dfs.sh + start-yarn.sh
+	$>start-dfs.sh		//hadoop-daemon.sh start namenode
+						//hadoop-daemons.sh start datanode
+	$>start-yarn.sh		//yarn-daemon.sh start resourcemanager
+						//yarn-daemons.sh start nodemanager
+
+配额管理(quota)
+-------------------
+	[目录配额]
+	计算目录下的所有文件的总个数。如果1，表示空目录。
+	$>hdfs dfsadmin -setQuota 1 dir1 dir2		//设置目录配额
+	$>hdfs dfsadmin -clrQuota 1 dir1 dir2		//清除配额管理
+
+	[空间配额]
+	计算目录下的所有文件的总大小.包括副本数.
+	空间配置至少消耗384M的空间大小(目录本身会占用384M的空间)。
+	$>hdfs dfsadmin -setSpaceQuota 3 data
+	$>echo -n a > k.txt
+	$>hdfs dfs -put k.txt data2
+	$>hdfs dfsadmin -clrSpaceQuota dir1			//清除配额管理
+
+
+快照管理
+--------------------
+	1.描述
+	  迅速对文件(夹)进行备份。不产生新文件，使用差值存储。
+	  默认是禁用快照,先启用。
+	2.命令
+	  $>hdfs dfsadmin -allowSnapShot dir1		//在dir1启用快照
+	  $>hdfs dfsadmin -disallowSnapShot dir1	//在dir1启用快照
+	  $>hdfs dfs -createSnapshot dir ss1		//创建快照
+	  $>hdfs dfs -renameSnapshot dir ss1 ss2	//重命名
+	  $>hdfs dfs -deleteSnapshot dir ss1		//删除快照
+
+
+slaves
+
+黑白名单的组合情况
+-------------------------
+include		//dfs.include
+exclude		//dfs.hosts.include
+
+include		exclude		Interpretation
+No			No			不能连接
+No			Yes			不能连接
+Yes			No			可以连接
+Yes			Yes			可以连接,将会退役状态。
+
+节点的服役和退役(hdfs)
+----------------------
+	[添加新节点]
+	1.在dfs.include文件中包含新节点名称,该文件在nn的本地目录。
+		[白名单]
+		[s201:/soft/hadoop/etc/dfs.include.txt]
+		s202
+		s203
+		s204
+		s205
+	2.在hdfs-site.xml文件中添加属性.
+		<property>
+			<name>dfs.hosts</name>
+			<value>/soft/hadoop/etc/dfs.include.txt</value>
+		</property>
+
+	3.在nn上刷新节点
+		$>hdfs dfsadmin -refreshNodes
+
+	4.在slaves文件中添加新节点ip(主机名)
+		s202
+		s203
+		s204
+		s205		//新添加的
+
+	5.单独启动新的节点中的datanode
+		[s205]
+		$>hadoop-daemon.sh start datanode
+
+		
+	[退役]
+	1.添加退役节点的ip到黑名单,不要更新白名单.
+		[/soft/hadoop/etc/dfs.hosts.exclude.txt]
+		s205
+
+	2.配置hdfs-site.xml
+		<property>
+			<name>dfs.hosts.exclude</name>
+			<value>/soft/hadoop/etc/dfs.hosts.exclude.txt</value>
+		</property>
+
+	3.刷新nn节点
+		$>hdfs dfsadmin -refreshNodes
+
+	4.查看webui,节点状态在decommisstion in progress.
+
+	5.当所有的要退役的节点都报告为Decommissioned,数据转移工作已经完成。
+
+	6.从白名单删除节点,并刷新节点
+		[s201:/soft/hadoop/etc/dfs.include.txt]
+		...
+
+		$>hdfs dfsadmin -refreshNodes
+
+	7.从slaves文件中删除退役节点
+
+节点的服役和退役(yarn)
+----------------------
+	[添加新节点]
+	1.在dfs.include文件中包含新节点名称,该文件在nn的本地目录。
+		[白名单]
+		[s201:/soft/hadoop/etc/dfs.include.txt]
+		s202
+		s203
+		s204
+		s205
+	2.在yarn-site.xml文件中添加属性.
+		<property>
+			<name>yarn.resourcemanager.nodes.include-path</name>
+			<value>/soft/hadoop/etc/dfs.include.txt</value>
+		</property>
+
+	3.在nn上刷新节点
+		$>yarn rmadmin -refreshNodes
+
+	4.在slaves文件中添加新节点ip(主机名)
+		s202
+		s203
+		s204
+		s205		//新添加的
+
+	5.单独启动新的节点中的nodemananger
+		[s205]
+		$>yarn-daemon.sh start nodemananger
+
+		
+	[退役]
+	1.添加退役节点的ip到黑名单,不要更新白名单.
+		[/soft/hadoop/etc/dfs.hosts.exclude.txt]
+		s205
+
+	2.配置yarn-site.xml
+		<property>
+			<name>yarn.resourcemanager.nodes.exclude-path</name>
+			<value>/soft/hadoop/etc/dfs.hosts.exclude.txt</value>
+		</property>
+
+	3.刷新rm节点
+		$>yarn rmadmin -refreshNodes
+
+	4.查看webui,节点状态在decommisstion in progress.
+
+	5.当所有的要退役的节点都报告为Decommissioned,数据转移工作已经完成。
+
+	6.从白名单删除节点,并刷新节点
+
+		$>yarn rmadmin -refreshNodes
+
+	7.从slaves文件中删除退役节点
+
+
+安装rose
+---------------
+	0.UML
+		统一建模语言。
+		画图。
+		use case			//用例
+		class				//
+	1.安装dtlite虚拟光驱
+	2.打开虚拟光驱.
+	3.
+	4.

@@ -1,0 +1,324 @@
+﻿分区函数
+---------------
+1,在map	
+
+combiner:合成，map的reduce(聚合) 在分区内聚合
+1，分区后产生数据后在分区内聚合（每个分区都会有一个）
+SequenceFile
+----------------
+	序列文件。k v对 可切割 有同步点（可自己设置）
+压缩三种 None           //不压缩
+  	 Record		//value
+	 Block		//records
+-------------------------------------
+压缩编解码器：
+Deflate
+gzip		//
+bzip2		//
+lzo		//
+lz4		//
+snappy		??
+
+
+SequenceFileInputFormat  //序列文件输入格式
+TextFileInput            //文本输入格式
+
+
+MutltiInputs（多输入）;使用多个输入作为job的输入来源
+---------------------------------------------
+也就是在InputFormat 前把添加各种不同的序列源
+里面的方法也就是  addInputPath等等。。。。
+map也可以在这个流程中套进来
+
+	package com.it18zhang.hdfs.mr.multiinput;
+
+	import org.apache.hadoop.conf.Configuration;
+	import org.apache.hadoop.fs.Path;
+	import org.apache.hadoop.io.IntWritable;
+	import org.apache.hadoop.io.Text;
+	import org.apache.hadoop.mapreduce.Job;
+	import org.apache.hadoop.mapreduce.lib.input.*;
+	import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+	/**
+	 *
+	 */
+	public class WCApp {
+		public static void main(String[] args) throws Exception {
+
+			Configuration conf = new Configuration();
+
+			conf.set("fs.defaultFS", "file:///");
+
+			Job job = Job.getInstance(conf);
+
+			//设置job的各种属性
+			job.setJobName("WCAppMulti");                        //作业名称
+			job.setJarByClass(WCApp.class);                 //搜索类
+
+			//多个输入
+			MultipleInputs.addInputPath(job,new Path("file:///d:/mr/txt"),TextInputFormat.class, WCTextMapper.class);
+			MultipleInputs.addInputPath(job,new Path("file:///d:/mr/seq"), SequenceFileInputFormat.class,WCSeqMapper.class);
+
+			//设置输出
+			FileOutputFormat.setOutputPath(job,new Path(args[0]));
+
+			job.setReducerClass(WCReducer.class);           //reducer类
+			job.setNumReduceTasks(3);                       //reduce个数
+
+			job.setOutputKeyClass(Text.class);
+			job.setOutputValueClass(IntWritable.class);     //
+
+			job.waitForCompletion(true);
+		}
+	}
+
+
+单独配置2nn到独立节点
+-------------------------
+	[hdfs-site.xml]
+	<property>
+			<name>dfs.namenode.secondary.http-address</name>
+			<value>s206:50090</value>
+	</property>
+
+
+计数器
+-------------
+	context.getCounter("r", "WCReducer.reduce").increment(1);
+
+	hadoop jar HdfsDemo.jar com.it18zhang.hdfs.mr.WCApp hdfs://user/centos/data/ hdfs://user/centos/data/out
+
+
+job
+
+
+全排序
+------------
+	1.定义1个reduce
+
+	2.自定义分区函数.
+		自行设置分解区间。
+
+	3.使用hadoop采样机制。
+		通过采样器生成分区文件，结合hadoop的TotalOrderPartitioner进行分区划分。
+		TotalOrderPartitioner		//全排序分区类,读取外部生成的分区文件确定区间。
+
+		使用时采样代码在最后端,否则会出现错误。
+
+		//分区文件设置，设置的job的配置对象，不要是之前的conf.
+		TotalOrderPartitioner.setPartitionFile(job.getConfiguration(),new Path("d:/mr/par.lst"));
+
+
+倒排序
+------------------
+	KV对调。
+
+
+ObjectInputStream
+ObjectOutputStream
+
+oos.write();
+ois.read();
+
+二次排序
+-------------------
+	Key是可以排序的。
+	需要对value排序。
+	1.自定义key
+		package com.it18zhang.hdfs.maxtemp.allsort.secondarysort;
+
+		import org.apache.hadoop.io.WritableComparable;
+
+		import java.io.DataInput;
+		import java.io.DataOutput;
+		import java.io.IOException;
+
+		/**
+		 * 自定义组合key
+		 */
+		public class ComboKey implements WritableComparable<ComboKey> {
+			private int year ;
+			private int temp ;
+
+			public int getYear() {
+				return year;
+			}
+
+			public void setYear(int year) {
+				this.year = year;
+			}
+
+			public int getTemp() {
+				return temp;
+			}
+
+			public void setTemp(int temp) {
+				this.temp = temp;
+			}
+
+			/**
+			 * 对key进行比较实现
+			 */
+			public int compareTo(ComboKey o) {
+				int y0 = o.getYear();
+				int t0 = o.getTemp() ;
+				//年份相同(升序)
+				if(year == y0){
+					//气温降序
+					return -(temp - t0) ;
+				}
+				else{
+					return year - y0 ;
+				}
+			}
+
+			/**
+			 * 串行化过程
+			 */
+			public void write(DataOutput out) throws IOException {
+				//年份
+				out.writeInt(year);
+				//气温
+				out.writeInt(temp);
+			}
+
+			public void readFields(DataInput in) throws IOException {
+				year = in.readInt();
+				temp = in.readInt();
+			}
+		}
+
+	2.自定义分区类,按照年份分区
+		/**
+		 * 自定义分区类
+		 */
+		public class YearPartitioner extends Partitioner<ComboKey,NullWritable> {
+
+			public int getPartition(ComboKey key, NullWritable nullWritable, int numPartitions) {
+				int year = key.getYear();
+				return year % numPartitions;
+			}
+		}
+
+	3.定义分组对比器
+		public class YearGroupComparator extends WritableComparator {
+
+			protected YearGroupComparator() {
+				super(ComboKey.class, true);
+			}
+
+			public int compare(WritableComparable a, WritableComparable b) {
+				ComboKey k1 = (ComboKey)a ;
+				ComboKey k2 = (ComboKey)b ;
+				return k1.getYear() - k2.getYear() ;
+			}
+		}
+
+	4.定义Key排序对比器
+		package com.it18zhang.hdfs.maxtemp.allsort.secondarysort;
+
+		import org.apache.hadoop.io.WritableComparable;
+		import org.apache.hadoop.io.WritableComparator;
+
+		/**
+		 *ComboKeyComparator
+		 */
+		public class ComboKeyComparator extends WritableComparator {
+
+			protected ComboKeyComparator() {
+				super(ComboKey.class, true);
+			}
+
+			public int compare(WritableComparable a, WritableComparable b) {
+				ComboKey k1 = (ComboKey) a;
+				ComboKey k2 = (ComboKey) b;
+				return k1.compareTo(k2);
+			}
+		}
+	
+	5.编写Mapper
+	6.编写Reduce
+		package com.it18zhang.hdfs.maxtemp.allsort.secondarysort;
+
+		import org.apache.commons.lang.ObjectUtils;
+		import org.apache.hadoop.io.IntWritable;
+		import org.apache.hadoop.io.NullWritable;
+		import org.apache.hadoop.mapreduce.Reducer;
+
+		import java.io.IOException;
+
+		/**
+		 * Reducer
+		 */
+		public class MaxTempReducer extends Reducer<ComboKey, NullWritable, IntWritable, IntWritable>{
+
+			/**
+			 */
+			protected void reduce(ComboKey key, Iterable<NullWritable> values, Context context) throws IOException, InterruptedException {
+				int year = key.getYear();
+				int temp = key.getTemp();
+				System.out.println("==============>reduce");
+				for(NullWritable v : values){
+					System.out.println(key.getYear() + " : " + key.getTemp());
+				}
+				context.write(new IntWritable(year),new IntWritable(temp));
+			}
+		}
+	
+	7.App
+		package com.it18zhang.hdfs.maxtemp.allsort.secondarysort;
+
+		import org.apache.hadoop.conf.Configuration;
+		import org.apache.hadoop.fs.Path;
+		import org.apache.hadoop.io.IntWritable;
+		import org.apache.hadoop.io.NullWritable;
+		import org.apache.hadoop.mapreduce.Job;
+		import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+		import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+		import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+		/**
+		 *
+		 */
+		public class MaxTempApp {
+			public static void main(String[] args) throws Exception {
+
+				Configuration conf = new Configuration();
+				conf.set("fs.defaultFS","file:///");
+
+				Job job = Job.getInstance(conf);
+
+				//设置job的各种属性
+				job.setJobName("SecondarySortApp");                        //作业名称
+				job.setJarByClass(MaxTempApp.class);                 //搜索类
+				job.setInputFormatClass(TextInputFormat.class); //设置输入格式
+
+				//添加输入路径
+				FileInputFormat.addInputPath(job,new Path(args[0]));
+				//设置输出路径
+				FileOutputFormat.setOutputPath(job,new Path(args[1]));
+
+				job.setMapperClass(MaxTempMapper.class);             //mapper类
+				job.setReducerClass(MaxTempReducer.class);           //reducer类
+
+				//设置Map输出类型
+				job.setMapOutputKeyClass(ComboKey.class);            //
+				job.setMapOutputValueClass(NullWritable.class);      //
+
+				//设置ReduceOutput类型
+				job.setOutputKeyClass(IntWritable.class);
+				job.setOutputValueClass(IntWritable.class);         //
+
+				//设置分区类
+				job.setPartitionerClass(YearPartitioner.class);
+				//设置分组对比器
+				job.setGroupingComparatorClass(YearGroupComparator.class);
+				//设置排序对比器
+				job.setSortComparatorClass(ComboKeyComparator.class);
+
+				job.setNumReduceTasks(3);                           //reduce个数
+				//
+				job.waitForCompletion(true);
+			}
+		}

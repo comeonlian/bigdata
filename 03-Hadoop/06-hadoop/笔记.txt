@@ -1,0 +1,333 @@
+﻿本地模式job提交流程
+--------------------
+	mr.Job = new Job();
+	job.setxxx();
+	JobSubmitter.提交
+	LocalJobRunner.Job();
+	start();
+
+hdfs write
+-------------
+	packet,
+
+
+hdfs 切片计算方式
+------------------------
+	getFormatMinSplitSize() = 1
+
+	//最小值(>=1)							1						0
+	long minSize = Math.max(getFormatMinSplitSize(), getMinSplitSize(job));
+
+	//最大值(<= Long.Max , mapreduce.input.fileinputformat.split.maxsize=)
+	long maxSize = getMaxSplitSize(job);
+
+	//得到block大小
+	long blockSize = file.getBlockSize();
+
+	//minSplit maxSplit blockSize
+	//Math.max(minSize, Math.min(maxSize, blockSize));
+
+
+LF : Line feed,换行符
+private static final byte CR = '\r';
+private static final byte LF = '\n';
+
+
+压缩
+-----------------
+	1.Windows
+		源文件大小:82.8k
+		源文件类型:txt
+		压缩性能比较
+					|	DeflateCodec	GzipCodec	BZip2Codec	Lz4Codec	SnappyCodec	|结论
+		------------|-------------------------------------------------------------------|----------------------
+		压缩时间(ms)|	450				7			196			44			不支持		|Gzip > Lz4 > BZip2 > Deflate
+		------------|-------------------------------------------------------------------|----------------------
+		解压时间(ms)|	444				66			85			33						|lz4  > gzip > bzip2 > Deflate
+		------------|-------------------------------------------------------------------|----------------------
+		占用空间(k)	|	19k				19k			17k			31k			不支持		|Bzip > Deflate = Gzip > Lz4
+					|																	|
+
+	2.CentOS
+		源文件大小:82.8k
+		源文件类型:txt
+					|	DeflateCodec	GzipCodec	BZip2Codec	Lz4Codec	LZO		SnappyCodec	|结论
+		------------|---------------------------------------------------------------------------|----------------------
+		压缩时间(ms)|	944				77			261			53			77		不支持		|Gzip > Lz4 > BZip2 > Deflate
+		------------|---------------------------------------------------------------------------|----------------------
+		解压时间(ms)|	67				66			106			52			73					|lz4  > gzip > Deflate> lzo > bzip2 
+		------------|---------------------------------------------------------------------------|----------------------
+		占用空间(k)	|	19k				19k			17k			31k			34k					|Bzip > Deflate = Gzip > Lz4 > lzo
+
+
+远程调试
+-----------------
+	1.设置服务器java vm的-agentlib:jdwp选项.
+	[server]
+	//windwos
+	//set JAVA_OPTS=%JAVA_OPTS% -agentlib:jdwp=transport=dt_socket,address=8888,server=y,suspend=n
+	
+	//linux
+	export HADOOP_CLIENT_OPTS=-agentlib:jdwp=transport=dt_socket,address=8888,server=y,suspend=y
+	
+	2.在server启动java程序
+		hadoop jar HdfsDemo.jar com.it18zhang.hdfs.mr.compress.TestCompress
+
+	3.server会暂挂在8888.
+		Listening ...
+
+	4.客户端通过远程调试连接到远程主机的8888.
+		
+	5.客户端就可以调试了。
+
+
+hadoop jar 
+java 
+
+hadoop jar com.it18zhang.hdfs.mr.compress.TestCompress
+
+export HADOOP_CLIENT_OPTS=-agentlib:jdwp=transport=dt_socket,address=8888,server=y,suspend=y
+
+在pom.xml中引入新的插件(maven-antrun-plugin),实现文件的复制.
+-------------------------------------------------------------
+	[pom.xml]
+	<project>
+		...
+		<build>
+			<plugins>
+				...
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-antrun-plugin</artifactId>
+					<version>1.8</version>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals>
+								<goal>run</goal>
+							</goals>
+							<configuration>
+								<tasks>
+									<echo>---------开始复制jar包到共享目录下----------</echo>
+									<delete file="D:\downloads\bigdata\data\HdfsDemo-1.0-SNAPSHOT.jar"></delete>
+									<copy file="target/HdfsDemo-1.0-SNAPSHOT.jar" toFile="D:\downloads\bigdata\data\HdfsDemo.jar">
+									</copy>
+								</tasks>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</build>
+		...
+	</project>
+
+
+在centos上使用yum安装snappy压缩库文件
+--------------------------------------
+	[google snappy]
+	$>sudo yum search snappy				#查看是否有snappy库
+	$>sudo yum install -y snappy.x86_64		#安装snappy压缩解压缩库
+
+
+库文件
+-------------
+	windows	:dll(dynamic linked library)
+	linux	:so(shared object)
+
+
+
+LZO
+--------------
+	1.在pom.xml引入lzo依赖
+		<?xml version="1.0" encoding="UTF-8"?>
+		<project xmlns="http://maven.apache.org/POM/4.0.0"
+				 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+				 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+			<modelVersion>4.0.0</modelVersion>
+			<groupId>com.it18zhang</groupId>
+			<artifactId>HdfsDemo</artifactId>
+			<version>1.0-SNAPSHOT</version>
+			<packaging>jar</packaging>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins
+						</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<configuration>
+							<source>1.8</source>
+							<target>1.8</target>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>1.8</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<tasks>
+										<echo>---------开始复制jar包到共享目录下----------</echo>
+										<delete file="D:\downloads\bigdata\data\HdfsDemo-1.0-SNAPSHOT.jar"></delete>
+										<copy file="target/HdfsDemo-1.0-SNAPSHOT.jar" toFile="D:\downloads\bigdata\data\HdfsDemo.jar">
+										</copy>
+									</tasks>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+			<dependencies>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-client</artifactId>
+					<version>2.7.3</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-yarn-common</artifactId>
+					<version>2.7.3</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-yarn-client</artifactId>
+					<version>2.7.3</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+					<version>2.7.3</version>
+				</dependency>
+				<dependency>
+					<groupId>org.anarres.lzo</groupId>
+					<artifactId>lzo-hadoop</artifactId>
+					<version>1.0.0</version>
+					<scope>compile</scope>
+				</dependency>
+
+				<dependency>
+					<groupId>junit</groupId>
+					<artifactId>junit</artifactId>
+					<version>4.11</version>
+				</dependency>
+
+			</dependencies>
+		</project>
+
+	2.在centos上安装lzo库
+		$>sudo yum -y install lzo
+
+	3.使用mvn命令下载工件中的所有依赖
+		进入pom.xml所在目录，运行cmd：
+		mvn -DoutputDirectory=./lib -DgroupId=com.it18zhang -DartifactId=HdfsDemo -Dversion=1.0-SNAPSHOT dependency:copy-dependencies
+	
+	4.在lib下存放依赖所有的第三方jar
+		
+	5.找出lzo-hadoop.jar + lzo-core.jar复制到hadoop的响应目录下。
+		$>cp lzo-hadoop.jar lzo-core.jar /soft/hadoop/shared/hadoop/common/lib
+	
+	6.执行远程程序即可。
+
+
+修改maven使用aliyun镜像。
+--------------------------
+	[maven/conf/settings.xml]
+	<?xml version="1.0" encoding="UTF-8"?>
+	<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+			  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+	  <pluginGroups>
+	  </pluginGroups>
+
+	  <proxies>
+	  </proxies>
+
+	<servers>
+		<server>
+			<id>releases</id>
+			<username>admin</username>
+			<password>admin123</password>
+		</server>
+		<server>
+			<id>snapshots</id>
+			<username>admin</username>
+			<password>admin123</password>
+		</server>
+		<server>
+			<id>Tomcat7</id>
+			<username>tomcat</username>
+			<password>tomcat</password>
+		</server>
+	</servers>
+
+	<mirrors>
+		 <mirror>
+			<id>nexus-aliyun</id>
+			<mirrorOf>*</mirrorOf>
+			<name>Nexus aliyun</name>
+			<url>http://maven.aliyun.com/nexus/content/groups/public</url>
+		</mirror> 
+	</mirrors>
+	</settings>
+
+文件格式:SequenceFile
+------------------
+	1.SequenceFile
+		Key-Value对方式。
+
+	2.不是文本文件，是二进制文件。
+
+	3.可切割
+		因为有同步点。
+		reader.sync(pos);	//定位到pos之后的第一个同步点。
+		writer.sync();		//写入同步点
+
+	4.压缩方式
+		不压缩
+		record压缩			//只压缩value
+		块压缩				//按照多个record形成一个block.
+
+
+文件格式:MapFile
+--------------------
+	1.Key-value
+	2.key按升序写入(可重复)。
+	3.mapFile对应一个目录，目录下有index和data文件,都是序列文件。
+	4.index文件划分key区间,用于快速定位。
+
+
+自定义分区函数
+--------------------
+	1.定义分区类
+		public class MyPartitioner extends Partitioner<Text, IntWritable>{
+			public int getPartition(Text text, IntWritable intWritable, int numPartitions) {
+				return 0;
+			}
+		}
+	2.程序中配置使用分区类
+		job.setPartitionerClass(MyPartitioner.class);
+
+
+combinerd（合成） 继承了Reducer 任何的Reducer类都能被他使用
+-----------------
+ Map端的Reducer  预先化简
+1，为了减少网络带宽 将Map端发出的的数据进行聚合 并不是所有的都可以用combiner  
+2,combiner 
+
+
+
+
+
+
+
+
+
+
+
+	

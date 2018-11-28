@@ -1,0 +1,221 @@
+class A{
+	static int id0 ;//
+	int id ;		//
+
+	//静态代码块
+	static{
+	
+	}
+	//构造代码块
+	{
+	
+	}
+
+	static void xxx(){
+	}
+
+	void xxxxxx(){
+	}
+
+	public A(){
+		...
+	}
+}
+package com.it18zhang.java37.gof;
+
+public class SingleTon {
+	private static SingleTon singleTon = new SingleTon();
+
+	public static int count1 ;
+	public static int count2 = 0;
+
+	private SingleTon() {
+		count1++;
+		count2++;
+	}
+
+	public static SingleTon getInstance() {
+		return singleTon;
+	}
+}
+
+1.成员变量付默认值
+-------------
+	singleTon = null ;
+	count1 = 0;
+	count2 = 0 ;
+
+2.调用静态代码块 + 赋值.
+---------------
+	[singleTon = new SingleTon();]
+	count1 = 1 
+	count2 = 1 
+
+	[count2 = 0;]
+	count1 = 1 
+	count2 = 0 ;
+
+3.对象创建
+------------------
+	1.分配内存
+	2.成员变量付默认值
+	3.成员变量付初始化(构造代码块 + 赋值语句)
+	4.构造函数
+
+
+md5:
+--------------
+	123456
+	md5				//王晓云
+	sha-1
+	sha-5
+
+
+HA
+-----------------
+	high availability,高可用性.
+	持续提供服务的能力。
+	99.999%					//时间.24 * 7
+	0.99999
+	0.00001
+
+
+
+ZooKeeper
+-------------------
+	
+2nn
+--------------
+	时间1小时
+	空间64M
+
+MR
+-------------
+	Mapreduce,编程模型.
+	映射 + 化简。
+
+	GFS	NDFS
+	Map reduce
+
+
+extends Mapper{
+	map(){
+		...
+	}
+}
+extends Reducer{
+	reduce(){
+		...	
+	}
+}
+
+
+shuffle
+----------------
+	M和R之间进行数据分发。
+
+分区
+-----------------
+	Map端的工作，预先产生的kv进行分组。
+
+
+
+编写MR
+----------------
+	1.编写Mapper
+		package com.it18zhang.hdfs.mr;
+
+		import org.apache.hadoop.io.IntWritable;
+		import org.apache.hadoop.io.LongWritable;
+		import org.apache.hadoop.io.Text;
+		import org.apache.hadoop.mapreduce.Mapper;
+
+		import java.io.IOException;
+
+		/**
+		 * WCMapper
+		 */
+		public class WCMapper extends Mapper<LongWritable, Text, Text, IntWritable>{
+			protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+				Text keyOut = new Text();
+				IntWritable valueOut = new IntWritable();
+				String[] arr = value.toString().split(" ");
+				for(String s : arr){
+					keyOut.set(s);
+					valueOut.set(1);
+					context.write(keyOut,valueOut);
+				}
+			}
+		}
+
+	2.Reducer
+		package com.it18zhang.hdfs.mr;
+
+		import org.apache.hadoop.io.IntWritable;
+		import org.apache.hadoop.io.Text;
+		import org.apache.hadoop.mapreduce.Reducer;
+
+		import java.io.IOException;
+
+		/**
+		 * Reducer
+		 */
+		public class WCReducer extends Reducer<Text, IntWritable, Text, IntWritable>{
+
+			/**
+			 * reduce
+			 */
+			protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+				int count = 0 ;
+				for(IntWritable iw : values){
+					count = count + iw.get() ;
+				}
+				context.write(key,new IntWritable(count));
+			}
+		}
+
+
+Job
+------------
+	MapTask
+	ReduceTask
+
+
+
+数据倾斜
+--------------
+
+
+[a.txt]
+
+hello world tom		-->0:hello world tom
+tom hello world		-->17:tom hello world
+
+url
+---------------------
+schema://domainname:port/path?id=..&name#ddd
+http://www.baidu.com
+file:///d:/
+
+
+file:/tmp/hadoop-Administrator/mapred/staging/Administrator170291570/.staging/job_local170291570_0001/job.xml
+
+Local模式运行MR流程
+-------------------------
+	1.创建外部Job(mapreduce.Job),设置配置信息
+	2.通过jobsubmitter将job.xml + split等文件写入临时目录
+	3.通过jobSubmitter提交job给localJobRunner,
+	4.LocalJobRunner将外部Job 转换成成内部Job
+	5.内部Job线程，开放分线程执行job
+	6.job执行线程分别计算Map和reduce任务信息并通过线程池孵化新线程执行MR任务。
+
+
+
+在hadoop集群上运行mrjob
+-------------------------
+	1.导入jar包
+		maven 
+	2.丢到hadoop
+	3.运行hadoop jar命令
+		$>hadoop jar HdfsDemo-1.0-SNAPSHOT.jar com.it18zhang.hdfs.mr.WCApp hdfs://s201/user/centos/wc/data hdfs://s201/user/centos/wc/out 
+	4.
