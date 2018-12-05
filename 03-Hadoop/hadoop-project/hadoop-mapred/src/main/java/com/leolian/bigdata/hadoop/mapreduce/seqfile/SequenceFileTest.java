@@ -8,6 +8,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Random;
+
 /**
  * @description:
  * @author lianliang
@@ -25,10 +27,36 @@ public class SequenceFileTest {
             configuration.set("fs.defaultFS", "file:///");
             fileSystem = FileSystem.get(configuration);
             String uri = "F:/Java-Dev/taobao-it18/03-Hadoop/seqfile/test.seq";
+            uri = "F:\\Java-Dev\\taobao-it18\\03-Hadoop\\mr\\totalsort\\temperature.seq";
             path = new Path(uri);
         } catch (Exception e) {
         }
     }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void writeTemperature() throws Exception {
+        IntWritable key = new IntWritable();
+        IntWritable value = new IntWritable();
+        SequenceFile.Writer writer = null;
+        try {
+            writer = SequenceFile.createWriter(fileSystem, configuration, path,
+                    key.getClass(), value.getClass());
+            for (int i = 0; i < 1000; i++) {
+                int year = 1970 + new Random().nextInt(100);
+                int temp = -30 + new Random().nextInt(100);
+                writer.append(new IntWritable(year), new IntWritable(temp));
+            }
+            for (int i = 0; i < 10000; i++) {
+                int year = 2000 + new Random().nextInt(10);
+                int temp = -30 + new Random().nextInt(100);
+                writer.append(new IntWritable(year), new IntWritable(temp));
+            }
+        } finally {
+            IOUtils.closeStream(writer);
+        }
+    }
+
 
     @SuppressWarnings("deprecation")
     @Test
@@ -65,7 +93,7 @@ public class SequenceFileTest {
 
     @SuppressWarnings("deprecation")
     @Test
-    public void readSeek() throws Exception{
+    public void readSeek() throws Exception {
         SequenceFile.Reader reader = null;
         try {
             reader = new SequenceFile.Reader(fileSystem, path, configuration);
@@ -86,7 +114,7 @@ public class SequenceFileTest {
 
     @SuppressWarnings("deprecation")
     @Test
-    public void readSync() throws Exception{
+    public void readSync() throws Exception {
         SequenceFile.Reader reader = null;
         try {
             reader = new SequenceFile.Reader(fileSystem, path, configuration);
@@ -104,4 +132,6 @@ public class SequenceFileTest {
             IOUtils.closeStream(reader);
         }
     }
+
+
 }
