@@ -10,6 +10,7 @@
 
 # Build Artifacts
 
+*.jar
 .gradle/
 build/
 target/
