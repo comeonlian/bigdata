@@ -14,13 +14,13 @@
         <maven.compiler.version>3.3</maven.compiler.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <hadoop.version>2.7.3</hadoop.version>
+        <hadoop.version>2.7.5</hadoop.version>
         <junit.version>4.12</junit.version>
     </properties>
     
     <modules>
         <module>hadoop-hdfs</module>
-        <module>hadoop-mapreduce</module>
+        <module>hadoop-mapred</module>
     </modules>
     
     <dependencies>
