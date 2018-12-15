@@ -24,7 +24,7 @@ public class DatabaseApp {
     // TODO: 提交集群测试
     public static void main(String[] args) throws Exception {
         Configuration configuration = new Configuration();
-        configuration.set("fs.defaultFS", "file:///");
+//        configuration.set("fs.defaultFS", "file:///");
 
         Job job = Job.getInstance(configuration);
         // 设置Job属性
