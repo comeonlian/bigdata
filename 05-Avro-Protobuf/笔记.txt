@@ -1,0 +1,293 @@
+避免数据倾斜
+---------------
+	
+
+hive
+---------------
+	数据倾斜.
+	$hive>SET hive.optimize.skewjoin=true;
+	$hive>SET hive.skewjoin.key=100000;
+	$hive>SET hive.groupby.skewindata=true;
+
+
+CREATE TABLE mydb.doc(line string) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' ;
+
+select t.word,count(*) from (select explode(split(line,' ')) word from doc ) t group by t.word ;
+
+
+
+java串行化
+----------------
+	
+串行化系统
+--------------
+
+
+javabean
+--------------
+
+标准javabean(pojo,plain old java object)
+-----------------------------
+	class Person{
+		public Person(){
+		}
+		private String name ;
+		public void setName(String name){
+			this.name = name ;
+		}
+		public String getName(){
+			return name ;
+		}
+	}
+
+google protobuf
+--------------------
+	1.下载google protobuf.
+		protoc-2.5.0-win32.zip
+
+	1'.pom.xml
+		<dependencies>
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>2.5.0</version>
+			</dependency>
+			<dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>4.11</version>
+			</dependency>
+		</dependencies>
+
+	2.设计对象
+		...
+	3.描述对象
+		package tutorial;
+		option java_package = "com.example.tutorial";
+		option java_outer_classname = "AddressBookProtos";
+		message Person {
+			required string name = 1;
+			required int32 id = 2;
+			optional string email = 3;
+			enum PhoneType {
+				MOBILE = 0;
+				HOME = 1;
+				WORK = 2;
+			}
+			message PhoneNumber {
+				required string number = 1;
+				optional PhoneType type = 2 [default = HOME];
+			}
+			repeated PhoneNumber phone = 4;
+		}
+		message AddressBook {
+			repeated Person person = 1;
+		}
+	4.编译描述
+		cmd>protoc --java_out . xxx.proto
+
+	5.导入源代码到项目中
+		...
+
+	6.使用对象
+		public class TestProtoBuf {
+
+			@Test
+			public void write() throws Exception{
+				AddressBookProtos.Person john = AddressBookProtos.Person.newBuilder()
+						.setId(12345)
+						.setName("tomas")
+						.setEmail("123@123.123")
+						.addPhone(AddressBookProtos.Person.PhoneNumber.newBuilder()
+								.setNumber("+351 999 999 999")
+								.setType(AddressBookProtos.Person.PhoneType.HOME)
+								.build())
+						.build();
+				john.writeTo(new FileOutputStream("d:/prototbuf.data"));
+			}
+
+			@Test
+			public void read() throws Exception{
+				AddressBookProtos.Person john = AddressBookProtos.Person.parseFrom(new FileInputStream("d:/prototbuf.data"));
+				System.out.println(john.getName());
+			}
+		}
+
+
+xml
+------------
+	<?xml version="1.0"?>
+	<persons>
+		<person id="" name="">
+			<age>12</age>
+		</person>
+	</person>
+
+json
+------------------
+	[{
+		"id" : 1,
+		"nmae" : "tom",
+		"age" : 20
+	},
+	{
+		"id" : 2,
+		"nmae" : "tomas",
+		"age" : 30
+	}
+	]
+
+avro (doug cutting)
+----------------
+	1.数据串行化系统
+	2.自描述语言.
+		数据结构和数据都存在文件中。跨语言。
+		使用json格式存储数据。
+	3.可压缩 + 可切割。
+	4.使用avro
+		a)定义schema
+		b)编译schema，生成java类
+			{
+				"namespace": "tutorialspoint.com",
+				"type": "record",
+				"name": "emp",
+				"fields": [
+					{"name": "name", "type": "string"},
+					{"name": "id", "type": "int"},
+					{"name": "salary", "type": "int"},
+					{"name": "age", "type": "int"},
+					{"name": "address", "type": "string"}
+				]
+			}
+		c)使用java类
+			cmd>java -jar avro-tools-1.7.7.jar compile schema emp.avsc .
+
+		d)单元测试
+			package com.it18zhang.avrodemo.test;
+
+			import org.apache.avro.Schema;
+			import org.apache.avro.file.DataFileReader;
+			import org.apache.avro.file.DataFileWriter;
+			import org.apache.avro.generic.GenericData;
+			import org.apache.avro.generic.GenericRecord;
+			import org.apache.avro.io.DatumWriter;
+			import org.apache.avro.specific.SpecificDatumReader;
+			import org.apache.avro.specific.SpecificDatumWriter;
+			import org.junit.Test;
+
+			import java.io.File;
+			import java.io.IOException;
+			import java.util.Iterator;
+
+			/**
+			 * Created by Administrator on 2017/3/23.
+			 */
+			public class TestAvro {
+
+			//    @Test
+			//    public void write() throws Exception {
+			//        //创建writer对象
+			//        SpecificDatumWriter empDatumWriter = new SpecificDatumWriter<Employee>(Employee.class);
+			//        //写入文件
+			//        DataFileWriter<Employee> empFileWriter = new DataFileWriter<Employee>(empDatumWriter);
+			//
+			//        //创建对象
+			//        Employee e1 = new Employee();
+			//        e1.setName("tomas");
+			//        e1.setAge(12);
+			//
+			//        //串行化数据到磁盘
+			//        empFileWriter.create(e1.getSchema(), new File("d:/avro/data/e1.avro"));
+			//        empFileWriter.append(e1);
+			//        empFileWriter.append(e1);
+			//        empFileWriter.append(e1);
+			//        empFileWriter.append(e1);
+			//        //关闭流
+			//        empFileWriter.close();
+			//    }
+			//
+			//    @Test
+			//    public void read() throws Exception {
+			//        //创建writer对象
+			//        SpecificDatumReader empDatumReader = new SpecificDatumReader<Employee>(Employee.class);
+			//        //写入文件
+			//        DataFileReader<Employee> dataReader = new DataFileReader<Employee>(new File("d:/avro/data/e1.avro")  ,empDatumReader);
+			//        Iterator<Employee> it = dataReader.iterator();
+			//        while(it.hasNext()){
+			//            System.out.println(it.next().getName());
+			//        }
+			//    }
+
+				/**
+				 * 直接使用schema文件进行读写，不需要编译
+				 */
+				@Test
+				public void writeInSchema() throws  Exception {
+					//指定定义的avsc文件。
+					Schema schema = new Schema.Parser().parse(new File("d:/avro/emp.avsc"));
+
+					//创建GenericRecord,相当于Employee
+					GenericRecord e1 = new GenericData.Record(schema);
+					//设置javabean属性
+					e1.put("Name", "ramu");
+			//        e1.put("id", 001);
+			//        e1.put("salary", 30000);
+					e1.put("age", 25);
+			//        e1.put("address", "chennai");
+
+					//
+					DatumWriter<GenericRecord> empDatumWriter = new SpecificDatumWriter<GenericRecord>(GenericRecord.class);
+					DataFileWriter<GenericRecord> empFileWriter = new DataFileWriter<GenericRecord>(empDatumWriter);
+					empFileWriter.create(schema,new File("d:/avro/data/e2.avro")) ;
+					empFileWriter.append(e1);
+					empFileWriter.append(e1);
+					empFileWriter.append(e1);
+					empFileWriter.append(e1);
+					empFileWriter.close();
+
+				}
+
+			}
+
+	非编译模式
+	---------------
+	    @Test
+		public void writeInSchema() throws  Exception {
+			//指定定义的avsc文件。
+			Schema schema = new Schema.Parser().parse(new File("d:/avro/emp.avsc"));
+
+			//创建GenericRecord,相当于Employee
+			GenericRecord e1 = new GenericData.Record(schema);
+			//设置javabean属性
+			e1.put("name", "ramu");
+	//        e1.put("id", 001);
+	//        e1.put("salary", 30000);
+			e1.put("age", 25);
+	//        e1.put("address", "chennai");
+
+			//
+			DatumWriter w1 = new SpecificDatumWriter (schema);
+			DataFileWriter w2 = new DataFileWriter(w1);
+			w2.create(schema,new File("d:/avro/data/e2.avro")) ;
+			w2.append(e1);
+			w2.append(e1);
+			w2.close();
+		}
+
+		/**
+		 * 反串行avro数据
+		 */
+		@Test
+		public void readInSchema() throws  Exception {
+			//指定定义的avsc文件。
+			Schema schema = new Schema.Parser().parse(new File("d:/avro/emp.avsc"));
+
+			GenericRecord e1 = new GenericData.Record(schema);
+			DatumReader r1 = new SpecificDatumReader (schema);
+			DataFileReader r2 = new DataFileReader(new File("d:/avro/data/e2.avro"),r1);
+			while(r2.hasNext()){
+				GenericRecord rec = (GenericRecord)r2.next();
+				System.out.println(rec.get("name"));
+			}
+			r2.close();
+		}
