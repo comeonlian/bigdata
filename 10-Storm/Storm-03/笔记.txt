@@ -1,0 +1,142 @@
+storm + hbase
+-------------------
+	数据写入hbase数据。
+
+	0.引入pom.xml依赖
+		<?xml version="1.0" encoding="UTF-8"?>
+		<project xmlns="http://maven.apache.org/POM/4.0.0"
+				 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+				 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+			<modelVersion>4.0.0</modelVersion>
+
+			<groupId>com.it18zhang</groupId>
+			<artifactId>StormDemo</artifactId>
+			<version>1.0-SNAPSHOT</version>
+
+			<dependencies>
+				<dependency>
+					<groupId>org.apache.storm</groupId>
+					<artifactId>storm-core</artifactId>
+					<version>1.0.3</version>
+				</dependency>
+				<dependency>
+					<groupId>junit</groupId>
+					<artifactId>junit</artifactId>
+					<version>4.11</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.storm</groupId>
+					<artifactId>storm-kafka</artifactId>
+					<version>1.0.2</version>
+				</dependency>
+				<dependency>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+					<version>1.2.17</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.kafka</groupId>
+					<artifactId>kafka_2.10</artifactId>
+					<version>0.8.1.1</version>
+					<exclusions>
+						<exclusion>
+							<groupId>org.apache.zookeeper</groupId>
+							<artifactId>zookeeper</artifactId>
+						</exclusion>
+						<exclusion>
+							<groupId>log4j</groupId>
+							<artifactId>log4j</artifactId>
+						</exclusion>
+					</exclusions>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.storm</groupId>
+					<artifactId>storm-hbase</artifactId>
+					<version>1.0.3</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hbase</groupId>
+					<artifactId>hbase-client</artifactId>
+					<version>1.2.3</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-common</artifactId>
+					<version>2.7.3</version>
+				</dependency>
+			</dependencies>
+
+		</project>
+
+	1.HbaseBolt
+		package com.it18zhang.stormdemo.hbase;
+
+		import org.apache.hadoop.conf.Configuration;
+		import org.apache.hadoop.hbase.HBaseConfiguration;
+		import org.apache.hadoop.hbase.TableName;
+		import org.apache.hadoop.hbase.client.Connection;
+		import org.apache.hadoop.hbase.client.ConnectionFactory;
+		import org.apache.hadoop.hbase.client.Table;
+		import org.apache.hadoop.hbase.util.Bytes;
+		import org.apache.storm.shade.org.apache.http.conn.HttpConnectionFactory;
+		import org.apache.storm.task.OutputCollector;
+		import org.apache.storm.task.TopologyContext;
+		import org.apache.storm.topology.IRichBolt;
+		import org.apache.storm.topology.OutputFieldsDeclarer;
+		import org.apache.storm.tuple.Tuple;
+
+		import java.io.IOException;
+		import java.util.Map;
+
+		/**
+		 * HbaseBolt,写入数据到hbase库中。
+		 */
+		public class HbaseBolot implements IRichBolt {
+
+			private Table t ;
+			public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+				try {
+					Configuration conf = HBaseConfiguration.create();
+					Connection conn = ConnectionFactory.createConnection(conf);
+					TableName tname = TableName.valueOf("ns1:wordcount");
+					t = conn.getTable(tname);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+			}
+
+			public void execute(Tuple tuple) {
+				String word = tuple.getString(0);
+				Integer count = tuple.getInteger(1);
+				//使用hbase的increment机制进行wordcount
+				byte[] rowkey = Bytes.toBytes(word);
+				byte[] f = Bytes.toBytes("f1");
+				byte[] c = Bytes.toBytes("count");
+				try {
+					t.incrementColumnValue(rowkey,f,c,count);
+				} catch (IOException e) {
+				}
+			}
+
+			public void cleanup() {
+			}
+
+			public void declareOutputFields(OutputFieldsDeclarer declarer) {
+			}
+
+			public Map<String, Object> getComponentConfiguration() {
+				return null;
+			}
+		}
+
+	2.复制配置hbase配置文件到resources下
+		[resources]
+		hbase-site.xml
+		hdfs-site.xml
+
+	3.执行
+		启动hbase集群 + storm。
+	
+	4.查看hbase表数据
+		$hbase>get_counter 'ns1:wordcount' , 'word' , 'f1:count'

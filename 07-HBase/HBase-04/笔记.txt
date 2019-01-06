@@ -1,0 +1,174 @@
+hbase
+---------------
+	协处理器.
+	Observer			//触发器,基于事件激活的。
+	Endpoint			//存储过程,客户端调用。
+
+	RegionObserver		//system --> user[加载顺序]
+
+	100
+
+	00-99
+
+	callerId - 201703 : hashcode % 100 = 00-99
+
+	01,139xxxx,138yyy,....
+热点
+----------------
+	让数据均匀分散。
+	
+
+create 'ns1:calllogs' , SPLITS=>[01,02,03,,...99,]
+rowkey
+----------------
+	按照byte排序。
+
+create table xxx(){
+
+}
+
+rowkey
+-----------------
+	分区编号
+	xx,callerId,callTime,calleeId
+
+	startkey = xx,19626675332,
+	startkey = xx,19626675333,
+
+通化记录
+---------------
+	1.创建表
+		create 'ns1:calllogs','f1'
+
+	2.创建单元测试
+		@Test
+		public void put() throws Exception {
+			Configuration conf = HBaseConfiguration.create();
+			Connection conn = ConnectionFactory.createConnection(conf);
+			TableName tname = TableName.valueOf("ns1:calllogs");
+			Table table = conn.getTable(tname);
+
+			String callerId = "13845456767" ;
+			String calleeId = "139898987878" ;
+			SimpleDateFormat sdf = new SimpleDateFormat();
+			sdf.applyPattern("yyyyMMddHHmmss");
+			String callTime = sdf.format(new Date());
+			int duration = 100 ;
+			DecimalFormat dff = new DecimalFormat();
+			dff.applyPattern("00000");
+			String durStr = dff.format(duration);
+
+			//区域00-99
+			int hash = (callerId + callTime.substring(0, 6)).hashCode();
+			hash = (hash & Integer.MAX_VALUE) % 100 ;
+
+			//hash区域号
+			DecimalFormat df = new DecimalFormat();
+			df.applyPattern("00");
+			String regNo = df.format(hash);
+
+			//拼接rowkey
+			//xx , callerid , time ,  direction, calleid  ,duration
+			String rowkey = regNo + "," + callerId + "," + callTime + "," + "0," + calleeId + "," + durStr  ;
+			byte[] rowid = Bytes.toBytes(rowkey);
+			Put put = new Put(rowid);
+			put.addColumn(Bytes.toBytes("f1"),Bytes.toBytes("callerPos"),Bytes.toBytes("河北"));
+			put.addColumn(Bytes.toBytes("f1"),Bytes.toBytes("calleePos"),Bytes.toBytes("河南"));
+			//执行插入
+			table.put(put);
+			System.out.println("over");
+		}
+
+	3.创建协处理器
+		public class CalleeLogRegionObserver extends BaseRegionObserver{
+
+			public void postPut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit, Durability durability) throws IOException {
+				super.postPut(e, put, edit, durability);
+				//
+				TableName callLogs = TableName.valueOf("calllogs");
+				//得到当前的TableName对象
+				TableName tableName = e.getEnvironment().getRegion().getRegionInfo().getTable();
+				if(!callLogs.equals(tableName)){
+					return  ;
+				}
+
+				//得到主叫的rowkey
+				//xx , callerid , time ,  direction, calleid  ,duration
+				//被叫:calleid,time,
+
+				String rowkey = Bytes.toString(put.getRow());
+				String[] arr = rowkey.split(",");
+
+				String hash = Util.getRegNo(arr[4],arr[2]);
+				//hash
+
+				String newRowKey = hash + "," + arr[4] + "," + arr[2] + ",1," + arr[1] + "," +  arr[5] ;
+				Put newPut = new Put(Bytes.toBytes(newRowKey));
+
+				Table t = e.getEnvironment().getTable(tableName);
+
+				t.put(newPut);
+			}
+		}
+
+	4.配置hbase-site.xml并分发
+		<property>
+			<name>hbase.coprocessor.region.classes</name>
+			<value>com.it18zhang.hbasedemo.coprocessor.CalleeLogRegionObserver</value>
+		</property>
+	
+	5.启动hbase集群.
+			
+
+BloomFilter
+-----------------
+	布隆过滤器。
+
+
+phonix
+------------------
+	1.安装phonix
+		a)下载apache-phoenix-4.10.0-HBase-1.2-bin.tar.gz
+		b)tar
+		c)复制xxx-server.jar到hbase的lib目录，并且分发,删除以前的phonixjar包。
+		d)重启hbase
+
+	2.使用phonix的命令行程序
+		$>phonix/bin/.sqlline.py s202	//连接的是zk服务器
+		$phonix>!tables
+		$phonix>!help					//查看帮助
+
+
+	2.SQL Client安装
+		a)下载squirrel-sql-3.7.1-standard.jar
+			该文件是安装文件，执行的安装程序。
+			$>jar -jar squirrel-sql-3.7.1-standard.jar
+			$>下一步...
+
+		b)复制phoenix-4.10.0-HBase-1.2-client.jar到SQuerrel安装目录的lib下(c:\myprograms\squirrel)。
+
+		c)启动SQuirrel(GUI)
+			定位安装目录->执行squirrel-sql.bat
+		
+		d)打开GUI界面
+		
+		d)在左侧的边栏选中"Drivers"选项卡，
+			点击 "+" ->
+			URL				: jdbc:phoenix:192.168.231.202
+			Driverclass		: org.apache.phoenix.jdbc.PhoenixDriver	
+			jdbc:phoenix: s202
+
+		d)测试。
+
+	3.SQLLine客户端操作
+		//建表
+		$jdbc:phoenix>create table IF NOT EXISTS test.Person (IDCardNum INTEGER not null primary key, Name varchar(20),Age INTEGER);
+
+		//插入数据
+		$jdbc:phoenix>UPSERT INTO test.PERSON(IDCardNum , Name,Age) VALUES (1,'tom',12);
+
+		//删除数据
+		$jdbc:phoenix>delete from test.persion where idcardnum = 1 ;
+			
+		//更新数据
+		//upsert into test.PERSON(IDCardNum , Name,Age) VALUES (1,'tom',12);
