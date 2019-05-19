@@ -1,0 +1,382 @@
+val a = 100 ;
+class Animal{}
+class Dog extends Animal{}
+val d = new Dog()
+d.isInstanceOf[Animal]
+d.asInstanceOf[Animal]
+d.getClass
+d.getClass == classOf[Dog]
+d.getClass == classOf[Animal]
+class Animal(val name:String){}
+class Dog(name:String,val age:Int) extends Animal(name){}
+val d = new Dog("tom",12);
+d.name
+class Dog(name:String,val age:Int) extends Animal("tom"){}
+class Dog(name:String,val age:Int) extends Animal("tomas"){}
+val d = new Dog("name",12)
+d.name
+import scala.io.Source ;
+Source.fromFile("d:/hello.txt").mkString
+val c = Source.fromFile("d:/hello.txt").mkString
+c
+trait log{
+def run() = println("hello")
+}
+class dog extends log{}
+val d = new dog()
+d.run
+trait logger{                           
+	def log() = println("hello log");   
+}                                       
+trait logger1{                           
+	def log1() = println("hello log1");  
+}                                        
+                                         
+trait logger2{                           
+	def log2() = println("hello log2");  
+}                                        
+                                         
+class Dog extends logger1 with logger2{  
+	                                     
+}                                        
+val d  =new Dog()
+d.log1
+d.log2
+trait logger1{                           
+	def log1() = println("hello log1");  
+}                                        
+trait logger2 extends logger1{           
+}                                        
+trait logger1{                          
+	def log1() = println("hello log1"); 
+}                                       
+trait logger2 extends logger1{          
+}                                       
+trait logger1{                              
+	def log1() = println("hello log1");     
+}                                           
+trait logger2 {                             
+}                                           
+trait logger3 extends logger2 with logger1{ 
+}                                           
+trait logger{                     
+	this:Dog =>                   
+                                  
+	def run() = println("run....")
+}                                 
+trait logger{                     
+	this:Dog =>                   
+	def run() = println("run....")
+}                                 
+                                  
+class Dog{                        
+	                              
+}                                 
+                                  
+class Jing8 extends Dog{          
+	                              
+}                                 
+val jing8 = new Jing8()
+trait logger{                         
+	this:Dog =>                       
+	def run() = println("run....")    
+}                                     
+                                      
+class Dog{                            
+	                                  
+}                                     
+trait logger{                        
+	this:Dog =>                      
+	def run() = println("run....")   
+}                                    
+                                     
+trait Dog {                          
+	                                 
+}                                    
+1.+(2)
+!true
+-2
+~1
+~0
+val a = Nil 
+1::Nil
+1::2::Nil
+1::(2::Nil)
+2::Nil
+1::Nil
+val list = 2::Nil
+1::list
+Nil.::(2)
+	                                                  
+	def unapply(i:Int) = {(i - 100).toString}         
+object Dog{                                         
+	//                                              
+	def apply(str:String):Int = {str.toInt + 100}   
+	                                                
+	def unapply(i:Int):String = {(i - 100).toString}
+}                                                   
+val a = Dog("100")
+class Dog(var name:String , var age:Int){
+	}
+	                                       
+	def unapply(d:Dog) = (d.name,d.age)    
+	def unapply(d:Dog) = {(d.name,d.age)}    
+class Fraction(n:Int,d:Int){                    
+	                                            
+}                                               
+                                                
+object Fraction{                                
+	def apply(n : Int,d:Int)= new Fraction(n,d) 
+}                                               
+val f = Fraction(1,2)
+val f1 = Fraction(1,2)
+val f2 = Fraction(1,2)
+                                                           
+object Fraction{                                           
+	def apply(n : Int,d:Int)= new Fraction(n,d)            
+}                                                          
+val f1 = Fraction(1,2) ;
+val f2 = Fraction(3,4) ;
+class Fraction(n:Int,d:Int){                   
+}                                              
+class Fraction(val n:Int,val d:Int){              
+}                                                 
+                                                  
+object Fraction{                                  
+	def apply(n : Int,d:Int)= new Fraction(n,d)   
+	def unapply(f:Fraction) = Some(f.n,f.d)       
+	                                              
+}                                                 
+val f1 = Fraction(1,2)
+val Fraction(a,b) = f1 ;
+def add(a:Int,b:Int):Int = a + b
+val f = add _
+add(1,2)
+f(1,2)
+def multi(n:Int) = n * 2
+val f = multi _
+Array(1,2,3,4).map(f)
+(n:Double)=>3 * n
+val f = (n:Double)=>3 * n
+Array(1,2,3,4).map((x) => x * 3);
+def call(a:Int,b:Int,f1:(Int,Int)=>Int,f2:(Int,Int)=>Int)={
+	if(a > 0){                                             
+		f1(a,b) ;                                          
+	}                                                      
+	else{                                                  
+		f2(a,b) ;                                          
+	}                                                      
+}                                                          
+def add(a:Int,b:Int) = a + b 
+def sub(a:Int,b:Int) = a - b
+val f1 = add _
+val f2 = sub _
+call(1,2,f1,f2)
+call(-1,2,f1,f2)
+call(1,2,add _,sub _)
+call(1,2,add,sub)
+def call(a:Int,b:Int,f1:(Int,Int)=>Int,f2:(Int,Int)=>Int) : (Int)=>Int = { 
+	var n = 0 ;                                                            
+	if(a > 0){                                                             
+		n = f1(a,b) ;                                                      
+	}                                                                      
+	else{                                                                  
+		n = f2(a,b) ;                                                      
+	}                                                                      
+                                                                           
+	//                                                                     
+	def multi(x:Int) = x * n ;                                             
+	multi _                                                                
+	                                                                       
+}                                                                          
+call(1,2,add,sub)(100)
+val f = call _
+val f = call(1,2, (a:Int,b:Int)=>a+b ,(a:Int,b:Int)=>a - b)
+f(100)
+call(1,2, (a:Int,b:Int)=>a+b ,(a:Int,b:Int)=>a - b)(100)
+call(1,2,(a,b)=>a + b , (a:Int,b:Int)=> a- b)(100)
+call(1,2,(a,b)=>a + b , (a,b)=> a- b)(100)
+def valueAt(f:(Double)=>Double) = f(0.25)
+import scala.math._
+ceil(0.25)
+val f = ceil _
+ceil(0.25)
+def valueAt(f:(Double)=>Double) = f(0.25)
+valueAt(ceil _)
+valueAt(sqrt _)
+def mulby(factor : Double) = (x:Double) => x * factor
+mulby(2)
+mulby(2)(2)
+valueAt((x:Double)=>x * 3)
+valueAt((x)=>x * 3)
+valueAt(x=>x * 3)
+valueAt(_ * 3)
+var arr = Array(1,2,3,4)
+arr.map(2 * _)
+arr.map((e:Int)=> e * 2);
+arr.map((e)=> e * 2);
+arr.map(e=> e * 2);
+arr.map(_ * 2);
+arr.map(e=>{println(e) ; e * 3 })
+arr.filter(e=>e % 2 == 0)
+arr.map(3 * _).filter(_ % 2 == 0)
+"a" * 3
+"*" * 3
+val arr = 1 to 9
+arr.map("*" * _)
+arr.map("*" * _).foreach(println _)
+arr.map("*" * _).foreach(println)
+arr.map("*" * _).foreach(println(_))
+(1 to 50).map("*" * _).foreach(println(_))
+val r = 1 to 4
+r.reduceLeft(_*_)
+r.reduceLeft(_ + _)
+r.reduceLeft(_ - _)
+r.reduceRight(_ - _)
+r.reduceRight(_ - _)
+(1 to 3).reduceRight(_ - _)
+(1 to 4).reduceRight(_ - _)
+(1 to 2).reduceRight(_ - _)
+(1 to 2).reduceLeft(_ - _)
+(1 to 3).reduceLeft(_ - _)
+(1 to 3).reduceRight(_ - _)
+(1 to 4).reduceRight(_ - _)
+def mulone(a:Int) = {(x:Int) => a * x ;}
+mulone(1)(2)
+def mulone(a:Int) = {(x:Int) => a * x ;}
+def newThread(block :()=>Unit){ 
+	new Thread(){               
+		override def run(){     
+			block() ;           
+		}                       
+	}.start();                  
+}                               
+newThread(()=>{(1 to 10).foreach(println)}) ;
+newThread(()=>{                                                                        
+				(1 to 10).foreach(e => {                                               
+											val tname = Thread.currentThread.getName();
+											println(tname + " : " + e) ;               
+										})                                             
+			  }                                                                        
+) ;                                                                                    
+def newThread(block: =>Unit){ 
+	new Thread(){             
+		override def run(){   
+			block ;           
+		}                     
+	}.start();                
+}                             
+newThread{                                                                              
+				(1 to 10).foreach(e => {                                                
+											val tname = Thread.currentThread.getName(); 
+											println(tname + " : " + e) ;                
+										})                                              
+			  };                                                                        
+val l = List(4,2)
+val l = List(4,2,5,6,7,8)
+l.head
+l.tail
+99::l
+def sum(list:List[Int]):Int = {                         
+		if (list == Nil) 0 else list.head + sum(list.tail)
+	}                                                     
+list
+1::2::3::4::list
+sum(list)
+list
+var list2 = 1::2::3::4::list
+sum(list2)
+def sum(list:List[Int]):Int= list match{  
+	case Nil => 0                         
+	case a::b=> a + sum(b)                
+}                                         
+sum(list2)
+list2.sum
+list2.max
+list2.min
+list2
+list2:+3
+3+:list2
+list2 + "123"
+val set = Set(1,2,3)
+set
+set + 3
+set + (1,2,43)
+set
+set - 1
+set - (2,3)
+set
+set - (2,3)
+set ++ set 
+set
+list2
+ list2 ++ list2
+list2.drop(2)
+list2.drop(2)
+list2.drop(2).drop(2)
+list2 ++ list2
+val l1 = List(1,2)
+val l2 = List(3,4)
+l1 ++ l2
+l1 ++: l2
+l2 ++: l1
+l1
+3 ::l1
+l2 :::l1
+l1
+l2
+val s1 = Set(1,2,3)
+val s2 = Set(2,3,4)
+s1 | s2
+s1 & s2
+s1 &~ s2
+s1
+s1 + 5
+s1
+import scala.collection.mutable.{Set => SSet} ;
+val ss1 = SSet(1,2,3)
+ss1 += 5
+val ss2 = SSet(3,4,5,6)
+ss1
+ss1 -= 5
+ss1
+ss2
+ss2 -= 6
+ss2
+list2
+val buf = scala.collection.mutable.ArrayBuffer(1,2,3)
+buf
+2+=:buf
+buf += 5
+buf.isEmpty
+buf.length
+buf.init
+buf
+buf.init
+val a = buf.init
+a.init
+a.init.init
+a.init.init.init
+a.init.init.inits
+buf.take(3)
+buf.take(2)
+buf.drop(2)
+buf
+buf.splitAt(3)
+buf.splitAt(3)  _1
+buf.splitAt(3)  _2
+import scala.collection.mutable.ArrayBuffer
+val b1 = ArrayBuffer(1,2,3)
+val b2 = ArrayBuffer(3,4,5,6)
+b1.zip(b2)
+b1.zipAll(b1,-1,-2)
+b1.zipAll(b2,-1,-2)
+b2.zipAll(b1,-1,-2)
+b2.zipWithIndex
+b2
+val b1 = ArrayBuffer("tom","tomas","tomasLee");
+b1.map(_.toUpperCase)
+List(1,7,2,9).foldLeft(0)(_ - _)
+List(1,7,2,9).foldRight(0)(_ - _)
+List(9).foldRight(0)(_ - _)
+List(7,9).foldRight(0)(_ - _)

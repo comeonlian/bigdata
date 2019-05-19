@@ -1,0 +1,107 @@
+1.spark SQL统计查询
+-----------------------
+	thriftSerer2,让sparkSQL作为分布式查询引擎。
+	通知jdbc协议直接访问。
+
+	cluster集群部署模式
+		local
+		standalone		//独立,master worker
+		yarn			//yarn-client | yarn-cluster
+		mesos
+
+	app应用部署模式
+		driver程序的地点。
+		client
+		cluster			//worker节点上运行。
+
+	1.启动spark下的thriftserver2服务器
+		$>start-thriftserver.sh --master spark://s201:7077
+
+	2.web程序通过hive-jdbc驱动程序进行集成
+		引入pom.xml
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-jdbc</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+	3.编程
+		Class.forName("org.apache.hive.jdbc.HiveDriver");
+		Connection conn = DriverManager.getConnection("jdbc:hive2://s201:10000");
+		String sql = "select count(*) ,substr(calltime,1,6) from mydb.ext_calllogs_in_hbase " +
+				"where caller = '" + caller + "' and substr(calltime,1,4) == '" + year
+				+ "' group by substr(calltime,1,6) order by substr(calltime,1,6) desc";
+		Statement st = conn.createStatement();
+		ResultSet rs = st.executeQuery(sql);
+
+		List<CallLogStat> list = new ArrayList<CallLogStat>();
+		while (rs.next()) {
+			long count = rs.getLong(1);
+			String ym = rs.getString(2);
+			list.add(new CallLogStat(ym, (int)count));
+		}
+		rs.close();
+		st.close();
+		conn.close();
+		return list ;
+
+	4.
+
+2.java版本实现
+	spark实现某团购网的app端标签生成程序.
+
+3.hbase bulk load
+	wal:写前日志。
+	关闭缓冲区的自动清理。
+	put:buffer,flush.
+	HFile : TableOutputFormat,MR作业生成hfile文件。
+
+	//导出file文件
+	A --> B
+
+	A --> TSV
+	TSV --> B
+
+
+	//导出hbase表文件到hdfs
+	1.复制hbase的jar文件和metrices-core-xxx.jar文件到hadoop类路径下.
+		$>cd /soft/hbase/lib
+		$>ls | grep hbase | cp `xargs` /soft/hadoop/shared/hadoop/common/lib
+		$>ls | grep metric-core | cp `xargs` /soft/hadoop/shared/hadoop/common/lib
+
+	2.执行hbase-server-VERSION.jar下的MR程序，导出hbase的数据到hdfs中。
+		$>hadoop jar hbase-server-VERSION.jar export ns1:calllogs outtt
+
+大批量导入hbase hfile文件到hbase的表中。
+--------------------------------------------
+	[原理]
+		通过hbase提供的MR程序(改程序位于hbase-server-VERSION.jar中),将从其他hbase集群中的表复制出来的目录结构
+		上传到自己的hdfs上，并将该目录指定为mr程序的输入目录，直接导入到自己的hbase表中。
+		
+	[过程]
+		1.复制hbase在hdfs上的表一级目录到自己的hdfs文件系统。
+		2.通过hbase的completebulkload命令实现数据加载。
+			hadoop jar hbase-server-1.2.3.jar completebulkload  /hbase/data/ns1/mytable000 ns1:calllogs
+
+	
+
+/hbase/data/ns1/calllogs/90223e6dd3a339af6f802527d5cecb7b
+4.简历指导
+
+
+100 offer
+猎聘
+拉钩
+大街
+boss直聘
+
+--------------
+	1.不要海投
+	2.每天更新
+	3.共享面试题
+	4.现在状态:在职。
+	5.离职
+	6.
+
+面试
+---------------
+	

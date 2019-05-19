@@ -1,0 +1,200 @@
+var row = 1 ; 
+while(row <= 9 ){
+	var col = 1 ; 
+	while(col <= row){
+		print("%d x %d = %d\t",col,row,(row * col)) ;
+		col += 1 ;
+	}
+	println();
+	row += 1 ;
+}
+:load d:\scala\99.scala
+:load d:\scala\buy.scala
+:load d:\scala\buy.scala
+:load d:\scala\buy.scala
+:load d:\scala\buy.scala
+:load d:\scala\buy.scala
+for(x <- 1 to 10) println(x)
+for(x <- 1 until 10) println(x)
+import scala.util.control.Breaks._
+for(i <- 1 to 3 ; j <- 1 to 4 ) {printf("i = %d, j = %d , res = %d",i,j,i*j)} ;
+for(i <- 1 to 3 ; j <- 1 to 4 ) {printf("i = %d, j = %d , res = %d ",i,j,i*j);println()} ;
+for(i <- 1 to 3 ; j <- 1 to 4 if i != j ) {printf("i = %d, j = %d , res = %d ",i,j,i*j);println()} ;
+for (x <- 1 to 10 ) yield x % 2 ;
+add(1,2);
+add(1,2)
+def add(a:Int,b:Int):Int =	a + b 
+add(1,2)
+def fac(n:Int):Int = if(n ==1 ) 1 else n * fac(n-1) ;
+fac(4)
+fac(5)
+decorate("[[","hello","]]")
+decorate("hello","world")
+decorate(str="hello")
+decorate(str="hello",prefix="<<")
+def add(a:Int*) = for (x <- a) println(x);
+add(1,2,3,4,5)
+add(1,2,3)
+1 to 10
+add(1 to 10 :_*)
+def sum(args:Int*):Int = {if (args.length == 0) 0 else args.head + sum(args.tail:_*)}
+sum(1,2,3,4,5)
+def out(a:Int){print(a)}
+def out(a:Int){print(a);100}
+out(100)
+def out(a:Int):Unit={print(a);100}
+def out(a:Int):Unit={print(a)}
+val x = scala.io.Source.fromFile("d:\\scala\\buy.scala").mkString
+lazy val x = scala.io.Source.fromFile("d:\\scala\\buy.scala").mkString
+x
+lazy val x = scala.io.Source.fromFile("d:\\scala\\buy.s000cala").mkString
+var arr = new Array[Int](10);
+arr = Array(1,2,3)
+arr(0)
+import scala.collection.mutable.ArrayBuffer
+var buf = ArrayBuffer[Int]()
+buf
+buf += 1
+buf.+=(2)
+buf  += 3
+buf ++= Array(4,5,6)
+buf.trimEnd(2)
+buf
+buf.trimStart(2)
+buf
+buf.insert(0,1,2) ;
+buf
+buf.remove(0)
+buf
+buf.toArray
+val a = for(x <- 1 to 10 ) yield x % 2 == 0
+val a = for(x <- 1 to 10 if x % 2 == 0) yield x 
+val a = for(x <- 1 to 10 if x % 2 == 0) yield x  * 2
+val a = Array(1 to 10)
+val a = Array(1 to 10:_*)
+a.filter(_ % 2 == 0).map(_ * 2)
+val arr = Array(1,2,4)
+arr.sum
+arr.max
+arr.min
+val buf = ArrayBuffer(1,2,3,6,5,4)
+buf
+buf.toArray
+import scala.util.Sorting._
+quickSort(Array(1,4,3,2))
+val aa = quickSort(Array(1,4,3,2))
+aa
+val arr = Array(1,4,3,2)
+quickSort(arr)
+arr
+arr
+arr.mkString
+arr.mkString("<<",",",">>>>")
+var arr:Array[Int] =new Array[Int](4);
+val arr = Array(1,2,3,4)
+var arr = new Array[Array[Int]](4)
+arr(0) =Array(1) ;
+arr(1) =Array(1,2) ;
+arr(2) =Array(1,2,3) ;
+arr
+for(x <- 0 until arr.length) println(arr(x))
+val arr = Array.ofDim[Int](3,4)
+arr(0)(1)
+arr(0)(1) = 1
+arr
+println(arr.length)
+println(arr(0).length)
+import scala.collection.JavaConversions.bufferAsJavaList
+val buf = ArrayBuffer(1,2,3,4)
+val list:java.util.List[Int] = buf ;
+val map = Map(100->"tom",200->"tomas",300->"tomasLee")
+map
+map(100)
+val map2 = scala.collection.mutable.HashMap(1->1000,2->2000)
+map2(1) = 4000
+map2
+val map2 = scala.collection.mutable.HashMap
+val map2 = scala.collection.mutable.HashMap[Int,Int]()
+val map2 = new scala.collection.mutable.HashMap[Int,Int]
+map
+map2.+=(5->5000)
+map2.+=(5->5000,6->6000)
+map2
+map2.+=(5->5000,6->6000,7->70000)
+map2.+(5->5000,6->6000,7->70000)
+map2
+map2 += (8->8000)
+map2 += (8->8000,9->9000)
+map2 -= 8
+map2 -= 9
+map2 -= 7
+map
+map
+val newmap =  map + (4->"tott")
+map
+map
+map - 100
+map
+map
+for((k,v) <- map) print(k + ":::::" + v)
+for((k,v) <- map) println(k + ":::::" + v )
+map.keySet
+map.values
+for((k,v) <- map ) yield (v,k)
+val t = (1,"tom",12)
+t._1
+t._2
+t _2
+val (a,b,c) = t
+print(a)
+val husband = Array("ximengqing","niulang","liyapeng");
+val wife = Array("pan","zhi","wang")
+husband.zip(wife)
+val husband = Array("ximengqing","niulang","liyapeng","xie");
+husband.zip(wife)
+val husband = Array("ximengqing","niulang","liyapeng","xie");
+husband.zip(wife)
+class Person{
+private var id = 0 ;
+def incre(a:Int) = {id += a}
+def current() = id
+}
+var p = new Person()
+p.current
+p.current()
+p.incre(1)
+p.current()
+val p = new Person()
+p.name
+p.name
+p.name_=("jerryr")
+p.name
+p.name = "kkkk"
+p.name
+val c1 = new Counter()
+val c2 = new Counter()
+c2.incre(1)
+c1.isLess(c2)
+import scala.reflect.ensureAccessible
+val p = new Person()
+val p = new Person("kkk")
+p.name
+val p = new Person("kkk",12)
+val p = new Person("kkk",14)
+new Person("t",12,1)
+Util.hello
+object Jing8 extends Dog{
+override def a():Unit={println("hellow")}
+}
+Jing8.a
+val a =  Array(100)
+val a = new Array(100)
+object Util{
+def apply(s:String) = print(s)
+}
+Util("helloworld")
+Util.apply("helloworld")
+object Hello{
+def main(args:Array[String]) = println("hello world")
+}
+Hello.main(Array("1"))

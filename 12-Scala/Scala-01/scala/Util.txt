@@ -1,0 +1,4 @@
+object Util{
+	private var brand = "benz" ;
+	def hello() = println("hello world");
+}

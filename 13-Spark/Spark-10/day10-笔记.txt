@@ -1,0 +1,228 @@
+Spark集群部署模式
+---------------
+	1.local
+	2.standalone
+	3.mesos
+	4.yarn
+
+Spark闭包处理
+---------------------
+	RDD,resilient distributed dataset,弹性(容错)分布式数据集。
+	分区列表,function,dep Option(分区类, Pair[Key,Value]),首选位置。
+	
+	运行job时，spark将rdd打碎变换成task,每个task由一个executor执行。执行
+	之前，spark会进行task的闭包(closure)计算。闭包是指针对executor可见的
+	变量和方法,以备在rdd的foreach中进行计算。闭包就是串行化后并发送给每个
+	executor.
+	
+	local模式下，所有spark程序运行在同一JVM中，共享对象，counter是可以累加的。
+	原因是所有executor指向的是同一个引用。
+
+	cluster模式下，不可以，counter是闭包处理的。每个节点对driver上的counter是
+	不可见的。只能看到自己内部串行化的counter副本。
+	
+
+Spark的应用的部署模式
+---------------------------
+	spark-submit --class xxx xx.jar --deploy-mode (client | cluster)
+	--deploy-mode指定是否部署driver程序在worker节点上还是在client主机上。
+
+	[client]
+	driver运行在client主机上。client可以不在cluster中。
+	
+	[cluster]
+	driver程序提交给spark cluster的某个worker节点来执行。
+	worker是cluster中的一员。
+	导出的jar需要放置到所有worker节点都可见的位置(如hdfs)才可以。
+
+	不论哪种方式，rdd的运算都在worker执行
+	
+验证app的部署模式
+-------------------
+	1.启动spark集群
+		
+	2.编程
+		package com.it18zhang.spark.scala;
+		import java.net.{InetAddress, Socket}
+
+		import org.apache.spark.{SparkConf, SparkContext}
+
+		/**
+		  *
+		  */
+		object DeployModeTest {
+
+			def printInfo(str:String): Unit ={
+				val ip = InetAddress.getLocalHost.getHostAddress;
+				val sock = new Socket("192.168.231.205",8888);
+				val out = sock.getOutputStream;
+				out.write((ip + " : " + str + "\r\n").getBytes())
+				out.flush()
+				sock.close();
+			}
+
+			def main(args: Array[String]): Unit = {
+				val conf = new SparkConf()
+				conf.setAppName("DeployModeTest")
+				conf.setMaster("spark://s201:7077")
+				val sc = new SparkContext(conf)
+				printInfo("hello world") ;
+
+				val rdd1 = sc.parallelize(1 to 10,3);
+				val rdd2 = rdd1.map(e=>{
+					printInfo(" map : " + e)
+					e * 2 ;
+				})
+				val rdd3 = rdd2.repartition(2)
+				val rdd4 = rdd3.map(e=>{
+					printInfo(" map2 : " + e)
+					e
+				})
+
+				val res = rdd4.reduce((a,b)=>{
+					printInfo("reduce : " + a + "," + b)
+					a + b ;
+				})
+				printInfo("driver : " + res + "")
+			}
+		}
+
+	3.打包
+		jar
+		对于cluster部署模式，必须要将jar放置到所有worker都能够看到的地方才可以，例如hdfs。
+
+	4.复制到s201
+
+	5.提交job到spark集群。
+		//分发jar到所有节点的相同目录下
+		$>spark-submit --class com.it18zhang.spark.scala.DeployModeTest --master spark://s201:7077 --deploy-mode client SparkDemo1-1.0-SNAPSHOT.jar
+
+		//上传jar到hdfs。
+		$>spark-submit --class com.it18zhang.spark.scala.DeployModeTest --master spark://s201:7077 --deploy-mode cluster hdfs://s201:8020/user/centos/SparkDemo1-1.0-SNAPSHOT.jar
+
+spark集群的运行方式
+-------------------
+	主要是cluster manager的区别。
+
+	local
+	[standalone]
+		使用SparkMaster进程作为管理节点.
+
+	[mesos]
+		使用mesos的master作为管理节点。
+
+	[yarn]
+		使用hadoop的ResourceManager作为master节点。不用spark的master.
+		不需要启动spark-master节点。也不需要。
+		
+		确保HADOOP_CONF_DIR和YARN_CONF_DIR环境变量指向了包含了hadoop配置文件的目录。
+		这些文件确保向hdfs写入数据并且连接到yarn的resourcemanager.这些配置分发到yarn集群，
+		确保所有节点的配置是一致的。配置中设置的所有属性确保所有节点都能找到。
+
+		在yarn上运行spark应用，可以采用两种部署模式。cluster:driver运行在appmaster进程中。
+		client:driver运行在client进程中，AppMaster只用于请求资源。
+
+		yarn模式	：--master yarn(yarn-site.xml)
+		standalone	: --master spark://s2001:7077
+		mesos		: --master mesos//xxx:xxx
+
+		spark-submit --class path.to.your.Class --master yarn --deploy-mode cluster [options] <app jar> [app options]
+
+		//yarn + cluster模式
+		spark-submit --class com.it18zhang.spark.scala.DeployModeTest --master yarn --deploy-mode cluster hdfs://mycluster/user/centos/SparkDemo1-1.0-SNAPSHOT.jar
+		
+		//yarn + cluster模式
+		spark-submit --class com.it18zhang.spark.scala.DeployModeTest --master yarn --deploy-mode client SparkDemo1-1.0-SNAPSHOT.jar
+
+
+
+spark脚本
+-----------------
+	sbin/start-all.sh --> sbin/start-master.sh --> sbin/start-config.sh		--> export HADOOP_CONF_DIR=...
+											   --> bin/load-spark-env.sh	--> conf/spark-env.sh
+
+	
+	sbin/start-all.sh -->sbin/start-slave.sh	--> sbin/start-config.sh 
+												--> bin/load-spark-env.sh
+												--> sbin/start-slave.sh
+
+	start-slave.sh	--> sbin/start-config.sh
+					--> bin/load-spark-env.sh
+
+
+修改/soft/sparl/conf/spark-env.sh
+-----------------------------------
+export HADOOP_CONF_DIR=/soft/hadoop/etc/hadoop
+export SPARK_EXECUTOR_INSTANCES=3
+export SPARK_EXECUTOR_CORES=1
+export SPARK_EXECUTOR_MEMORY=500M
+export SPARK_DRIVER_MEMORY=500M
+
+
+---------------
+	spark-submit --class com.it18zhang.spark.scala.DeployModeTest --master yarn --deploy-mode client SparkDemo1-1.0-SNAPSHOT.jar
+
+
+
+
+在提交作业时指定第三方类库
+--------------------------------
+	spark-submit  ... --jars x,x,x	
+
+mvn -DoutputDirectory=./lib -DgroupId=com.it18zhang -DartifactId=SparkDemo1 -Dversion=1.0-SNAPSHOT dependency:copy-dependencies
+
+
+
+配置spark on yarn执行模式
+-----------------------------------
+	1.将spark的jars文件放到hdfs上.
+		$>hdfs dfs -mkdir -p /user/centos/spark/jars
+		hdfs dfs -put 
+	2.配置spark属性文件
+		[/spark/conf/spark-default.conf]
+		spark.yarn.jars hdfs://mycluster/user/centos/spark/jars/*
+
+	3.提交作业
+		//yarn + cluster
+		spark-submit --class com.it18zhang.spark.scala.DeployModeTest --master yarn --deploy-mode cluster hdfs://mycluster/user/centos/SparkDemo1-1.0-SNAPSHOT.jar
+
+		//yarn + client
+		spark-submit --class com.it18zhang.spark.scala.DeployModeTest --master yarn --deploy-mode client SparkDemo1-1.0-SNAPSHOT.jar
+
+
+
+配置机架感知
+-----------------
+	com.it18zhang.hdfs.rackaware.MyRackAware2
+
+	[core-site.xml]
+<property>
+		<name>topology.node.switch.mapping.impl</name>
+		<value>com.it18zhang.hdfs.rackaware.MyRackAware2</value>
+</property>
+
+
+Spark master HA
+-------------------
+	[描述]
+	只针对standalone和mesos集群部署情况。
+	使用zk连接多个master并存储state。
+	master主要负责调度。
+
+	master:		SPOF
+
+	[配置]
+	[spark/conf/spark-env.sh]
+	export SPARK_DAEMON_JAVA_OPTS="-Dspark.deploy.recoveryMode=ZOOKEEPER -Dspark.deploy.zookeeper.url=s201:2181,s202:2181,s203:2181 -Dspark.deploy.zookeeper.dir=/spark"
+	
+	spark.deploy.recoveryMode=ZOOKEEPER
+	spark.deploy.zookeeper.url=s201:2181,s202:2181,s203:2181
+	spark.deploy.zookeeper.dir=/spark/ha
+
+	分发配置。
+	
+	[启动方式]
+	直接在多个节点上启动master进程。自动从zk中添加或删除.
+	可通过指定多个master连接地址实现。
+	spark://host1:port1,host2:port2.
+

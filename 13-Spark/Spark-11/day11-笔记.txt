@@ -1,0 +1,227 @@
+spark集群部署模式
+-----------------
+	1.local
+		本地模式
+
+	2.standalone
+		独立
+		启动spark集群。
+		master
+		worker
+
+	3.yarn
+		不需要启动spark集群。
+		Resourcemanager.作为spark的cluster Manager
+
+	4.mesos
+
+
+提交job是部署模式
+---------------------
+	spark-submit --class xxx --name --master yarn | spark:// |local | mesos:// --deploy-mode client|cluster
+
+	Driver:
+
+
+spark + hive整合操纵hbase表
+----------------------------------
+	1.复制hive的hive-hbase-handler-2.1.0.jar文件到spark/jars目录下。
+
+	2.复制hive/下的metrics的jar文件到spark下。
+		$>cd /soft/hive/lib
+		$>ls | grep metrics | cp `xargs` /soft/spark/jars
+
+	3.启动spark-shell 本地模式测试
+		$>spark-shell --master local[4]
+		$scala>spark.sql("select * from mydb.ext_calllogs_in_hbase").show();
+		$scala>spark.sql("select count(*) ,substr(calltime,1,6) from ext_calllogs_in_hbase where caller = '15778423030' and substr(calltime,1,4) == '2017' group by substr(calltime,1,6)").show();
+
+
+启动spark standalone集群模式
+-------------------------------
+	1.分发所有jar包到集群节点
+	2.
+	3.
+	4.
+
+总结
+---------
+	[Spark + hive + hbase整合(本地模式 + spark-shell测试通过)]
+		1.复制hive的hive-hbase-handler-2.1.0.jar文件到spark/jars目录下。
+		  复制hive/下的metrics的jar文件到spark下。
+			$>cd /soft/hive/lib
+			$>ls | grep metrics | cp `xargs` /soft/spark/jars
+		2.启动spark-shell 本地模式测试
+			$>spark-shell --master local[4]
+			$scala>spark.sql("select * from mydb.ext_calllogs_in_hbase").show();
+			$scala>spark.sql("select count(*) ,substr(calltime,1,6) from ext_calllogs_in_hbase where caller = '15778423030' and substr(calltime,1,4)			== '2017' group by substr(calltime,1,6)").show();
+
+
+	[Spark + hive + hbase整合(standalone模式 + spark-shell测试通过)]
+		1.在spark集群上分发(1)模式下所有需要的jar包。
+		2.standalone启动spark集群.
+			$>spark/sbin/start-all.sh
+		
+		2.启动spark-shell连接到spark集群测试
+			$>spark-shell --master spark://s201:7077
+			$scala>spark.sql("select * from mydb.ext_calllogs_in_hbase").show();
+			$scala>spark.sql("select count(*) ,substr(calltime,1,6) from ext_calllogs_in_hbase where caller = '15778423030' and substr(calltime,1,4)			== '2017' group by substr(calltime,1,6)").show();
+		
+
+	[Spark + hive + idea编程手段访问hbase数据库]
+		1.引入依赖pom.xml
+			<dependency>
+				<groupId>org.apache.spark</groupId>
+				<artifactId>spark-hive_2.11</artifactId>
+				<version>2.1.0</version>
+			</dependency>
+			<!-- https://mvnrepository.com/artifact/org.apache.hive/hive-hbase-handler -->
+			<dependency>
+				<groupId>org.apache.hive</groupId>
+				<artifactId>hive-hbase-handler</artifactId>
+				<version>2.1.0</version>
+			</dependency>
+
+		2.编程处理
+			@Test
+			public void test1(){
+				String caller = "13341109505" ;
+				String year = "2017" ;
+				SparkSession sess = SparkSession.builder().enableHiveSupport().appName("SparkHive").master("spark://s201:7077").getOrCreate();
+				String sql = "select count(*) ,substr(calltime,1,6) from ext_calllogs_in_hbase " +
+						"where caller = '" + caller + "' and substr(calltime,1,4) == '" + year
+						+ "' group by substr(calltime,1,6) order by substr(calltime,1,6)";
+				Dataset<Row> df = sess.sql(sql);
+				List<Row> rows = df.collectAsList();
+				List<CallLogStat> list = new ArrayList<CallLogStat>();
+				for (Row row : rows) {
+					System.out.println(row.getString(1));
+					list.add(new CallLogStat(row.getString(1), (int)row.getLong(0)));
+				}
+			}
+
+
+
+77287793
+
+
+算法分析
+----------------
+	line.map(e=>e.split("\t"))		//映射
+	.filter(e=>e.extInfoList != null)
+	.
+
+	77287793 音响效果好,干净卫生,服务热情
+
+
+	77287793  干净卫生
+	77287793  服务热情
+	77287793  高大上
+	77287793  停车方便
+
+	(77287793 音响效果好),1
+	(77287793  干净卫生),1,
+	(77287793  服务热情),1
+	(77287793  高大上),1
+	(77287793  停车方便),1
+
+	redeuceByKey(_ + _)
+	(77287793 音响效果好),280
+	(77287793  干净卫生),380
+	(77287793  服务热情),480
+	(77287793  高大上),500
+	(77287793  停车方便),340
+
+	map()
+
+	77287793,(音响效果好,280)
+	77287793,( 干净卫生,380)
+
+
+	77287793, (音响效果好,280)
+	          干净卫生,380)
+
+	77287793, 干净卫生,380
+			  音响效果好,280
+
+	//1.
+	77287793 音响效果好,干净卫生,服务热情
+	          
+
+class Portrait{
+	private oubl
+}
+	
+						appid
+	uiqkey		//138xxxx==330400		手机号+appid
+	now			//1471017994272			第 11字段
+
+	val[]		//日期		val[0] = 20160813		
+				//手机号	val[1] = +Gy4CqGboYsxZS6BIaw+yg==
+				//appid		val[2] = 330400
+				//计数		val[3] = 1		,计算指定用户对特定app的使用次数
+				//时长		val[4] = 23		,计算指定用户对特定app的累计使用时长。
+	
+MR-2
+---------------
+	20160813|+7m2qbIOzFFyXttkYMXjpA==|010005|1|179			=>+7m2qbIOzFFyXttkYMXjpA== -->20160813|+7m2qbIOzFFyXttkYMXjpA==|010005|1|179
+	20160813|+844+iumk6xvhTO2fvpSaQ==||2|748				=>+844+iumk6xvhTO2fvpSaQ== -->20160813|+844+iumk6xvhTO2fvpSaQ==||2|748
+	20202->[
+				晋江文学城
+				0.001
+				0.001
+				0.1
+				0.3
+				0.3
+				0.2
+				0.1
+			]
+
+	用户画像对性别和年龄段进行推算。
+	通过手机App软件以及使用习惯进行推算。
+	通过对app设置性别和年龄段的相应权重结合用户每天使用app的时长
+	综合计算性别和年龄段的比重。
+
+	具体算法：
+	累加
+	(0.5,0.5)
+				-->(0.001 + 0.001) * 120 + 1  ==> sum
+				-->(0.001 * 120 + 0.5) /  sum;
+
+
+
+用户画像系统
+-------------------
+	使用Spark+hive+hbase+hadoop+zookeeper对海量用户手机App使用习惯进行
+	行为建模，集合高维度分析，实现用户画像。从而对用户社会属性、偏好属性、
+	财富属性、信用属性等高权重属性进行权重比计算，实现企业对用户的精准营销
+	定位。
+
+
+某电信公司海量通话记录存储与实时查询系统
+-------------------------------------
+	某电信公司使用hadoop+hbase+flume+kafka + zookeeper实现海量通话日志的存储、随机
+	访问与实时读写功能。系统中采用hbase实现bigtable技术，通过盐析rowkey结合表区域的预切割，
+	实现数据在集群上的均衡负载。通过row级bloomfilter与coprocessor协同，实现通话记录中主被叫
+	查询的透明处理与高速响应。系统采用spark SQL+hive+hbase对通话数据进行准实时聚合分析处理。
+	Spark集群通过thriftServer服务器部署层分布式查询引擎，同前端web项目进行透明化整合。
+
+某互联网公司面向APP应用开发者提供的，以品牌互推、流量互导、广告分账为主的一站式服务平台。
+
+
+	前端数据是交换机上下来的数据写入到本地日志文件中，主要包含通话信息记录，
+	内容涉及到主叫、被叫、时长、通话时间、主叫所在地区、被叫所在地区等等。
+
+	本地的日志文件通过flume实时收集数据到hbase。
+
+	由于通话日志中只有主叫信息，该系统采用协处理实现被叫通话记录的同步插入
+	并使用极少的冗余数据实现类二级索引，并对Get请求进行重写设计，实现主被叫查询时，
+	服务器端回传相同的通话详情，对客户端实现透明化处理。
+
+	为避免hbase系统中设计的重灾区，即热点问题，系统采用主叫方特征数据与通话时间特征
+	数据的hash计算后对rowkey进行加盐处理，可实现系统的高吞吐量查询和负载均衡处理。
+
+	本系统在hadoop的hdfs和Yarn层面以及hbase均采用外部化ZooKeeper集群实现统一的HA管理，
+	可轻松解决系统的容灾问题。其中Hadoop的HDFS的HA集群采用更加流行而且成熟的基于QJM的架构方案处理。
+
+	本系统可对公检法系统提供接口，集合手机号码绑定身份信息，快速可疑人员进行定位和跟踪。

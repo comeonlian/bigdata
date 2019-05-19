@@ -1,0 +1,194 @@
+核心类
+-------------
+	Stage子类
+		ShuffleMapStage
+		ResultStage
+
+	Task:
+		ResultTask
+		ShuffleMapTask
+
+	ActiveJob:
+
+Dependency:依赖
+-------------
+	NarrowDependency:	子RDD的每个分区依赖于父RDD的少量分区。
+		 |
+		/ \
+		---
+		 |----	OneToOneDependency		//父子RDD之间的分区存在一对一关系。
+		 |----	RangeDependency			//父RDD的一个分区范围和子RDD存在一对一关系。
+		 |----	OneToOneDependency		//父子RDD之间的分区存在一对一关系。
+
+	ShuffleDependency					//依赖，在shuffle阶段输出时的一种依赖。
+	
+	PruneDependency						//在PartitionPruningRDD和其父RDD之间的依赖
+										//子RDD包含了父RDD的分区子集。
+SparkContext
+---------------------
+	[SparkContext.scala:501行]
+	 val (sched, ts) = SparkContext.createTaskScheduler(this, master, deployMode)
+    _schedulerBackend = sched
+    _taskScheduler = ts
+    _dagScheduler = new DAGScheduler(this)
+
+创建spark上下文
+---------------
+[本地模式,通过线程模拟]
+	本地后台调度器
+	spark local
+	spark local[3]							//3线程,模拟cluster集群
+	spark local[*]							//匹配cpu个数，
+	spark local[3,2]						//3:3个线程，2最多重试次数。
+
+
+[相当于伪分布式]
+	StandaloneSchedulerBackend
+	spark local-cluster[N, cores, memory]	//模拟spark集群。
+
+[完全分布式]
+	StandaloneSchedulerBackend
+	spark spark://s201:7077					//连接到spark集群上.
+
+
+maxFailures
+----------------
+	最多失败次数:
+	1			//0和1等价，只执行一次。
+	2			//最多执行两次.
+
+shuffle对性能的影响
+----------------------
+	1.
+	2.
+
+RDD持久化
+------------------
+	跨操作进行RDD的内存式存储。
+	持久化RDD时，节点上的每个分区都会保存操内存中,以备在其他操作中进行重用。
+	缓存技术是迭代式计算和交互式查询的重要工具。
+	使用persist()和cache()进行rdd的持久化。
+	cache()是persist()一种.
+	action第一次计算时会发生persist().
+	spark的cache是容错的，如果rdd的任何一个分区丢失了，都可以通过最初创建rdd的进行重新计算。
+	persist可以使用不同的存储级别进行持久化。
+
+
+	MEMORY_ONLY			//只在内存
+	MEMORY_AND_DISK
+	MEMORY_ONLY_SER		//内存存储(串行化)
+	MEMORY_AND_DISK_SER 
+	DISK_ONLY			//硬盘
+	MEMORY_ONLY_2		//带有副本 
+	MEMORY_AND_DISK_2	//快速容错。
+	OFF_HEAP 
+
+
+删除持久化数据
+-----------------
+	rdd.unpersist();		//
+
+
+
+数据传递
+-------------------
+	map(),filter()高级函数中访问的对象被串行化到各个节点。每个节点都有一份拷贝。
+	变量值并不会回传到driver程序。
+	
+
+
+共享变量
+-----------------
+	spark通过广播变量和累加器实现共享变量。
+	[广播变量]
+		//创建广播变量
+		val bc1 = sc.broadcast(Array(1,2,3))
+		bc1.value
+
+	[累加器]
+		val ac1 = sc.longaccumulator("ac1")
+		ac1.value
+		sc.parell..(1 to 10).map(_ * 2).map(e=>{ac1.add(1) ; e}).reduce(_+_)
+		ac1.value			//10
+
+
+	通过spark实现pi的分布式计算
+	----------------------------
+	sc.parallelize(1 to 20).map(e=>{val a = 1f / (2 * e - 1) ;val b = if (e % 2 == 0) -1 else 1 ;a * b * 4}).reduce(_+_)
+
+
+Resilient Distributed Dataset		//弹性(容错)分布式数据集
+
+
+SparkSQL
+--------------
+	Hive			//hadoop mr sql
+	pheonix			//hbase之上构建sql交互过程
+
+	该模块能在spark运行sql语句。
+
+	DataFrame		//收据框.表.
+
+
+	SparkSQL		//SQL | DataFrame API.
+
+
+	RDD[Customer]==>
+	$scala>df = sc.createDataFrame(rdd);
+	//创建样例类
+	$scala>case class Customer(id:Int,name:String,age:Int)
+	//构造数据
+	$scala>val arr = Array("1,tom,12","2,tomas,13","3,tomasLee,14")
+	$scala>val rdd1 = sc.makeRDD(arr)
+	//创建对象rdd
+	$scala>val rdd2 = rdd1.map(e=>{e.split(",") ; Customer(arr(0).toInt,arr(1),arr(2).toInt)})
+	//通过rdd创建数据框
+	$scala>val df = spark.createDataFrame(rdd2);
+	//打印表结构
+	$scala>df.printSchema
+	$scala>df.show			//插叙数据
+
+	//创建临时视图
+	$scala>df.createTempView("customers")
+	$scala>val df2 = spark.sql("select * from customers")
+	$scala>spark.sql("select * from customers").show		//使用sql语句
+	$scala>val df1 = spark.sql("select * from cusotmers where id < 2");
+	$scala>val df2 = spark.sql("select * from cusotmers where id > 2");
+	$scala>df1.createTempView("c1")
+	$scala>df2.createTempView("c2")
+	$scala>spark.sql("select * from c1 union select * from c2").show()
+	$scala>df1.union(df2);
+	$scala>spark.sql("select id,name from customers").show
+	$scala>df.selectExpr("id","name")
+	$scala>df.where("name like 't%'")
+	
+	//映射
+	$scala>df.map(_.getAs[Int]("age")).reduce(_+_)			//聚合操作DataSet[Int]
+	$scala>df.agg(sum("age"),max("age"),min("age"))			//聚合函数
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+	
+	//创建customer的rdd
+
+
+
+	
+

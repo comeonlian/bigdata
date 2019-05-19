@@ -1,0 +1,410 @@
+Spark stream
+-------------
+	[DStream]:
+		离散流,连续的RDD序列。准实时计算。batch,秒.
+		DStream.map()
+		DStream.updateStateByKey();
+
+
+
+batch interval :批次的间隔.
+
+windows length :窗口长度,跨批次。是批次的整数倍。
+
+slide interval :滑动间隔,窗口计算的间隔时间，有时批次interval的整倍数。
+
+
+//安装
+reduceByKeyAndWindow(_ + _ ,windows length , sliding interval);
+
+
+持久化
+-------------
+	memory_only
+	memory_ser
+
+	sc.cache()===>sc.persist(memory_only);
+
+spark-submit --class xxx.x.x.x  --master xx.jar 
+
+生产环境中spark streaming的job的注意事项
+----------------------------------------
+	避免单点故障。
+	Driver			//驱动,运行用户编写的程序代码的主机。
+	Executors		//执行的spark driver提交的job,内部含有附加组件比如receiver，
+					//receiver接受数据并以block方式保存在memory中，同时，将数据块复制到
+					//其他executor中，已备于容错。每个批次末端会形成新的DStream，交给
+					//下游处理。如果receiver故障，其他执行器中的receiver会启动进行数据的接收。
+
+checkpoint
+--------------------------
+	启动checkpoint()			//配置目录,持久化过程。
+	updateStateBykey()			//
+
+
+spark streaming中的容错实现
+--------------------------
+	如果executor故障，所有未被处理的数据都会丢失，解决办法可以通过wal(hbase,hdfs/WALs)方式
+	将数据预先写入到hdfs或者s3.
+
+	如果Driver故障，driver程序就会停止，所有executor都是丢失连接，停止计算过程。解决办法需要配置和编程。
+
+	1.配置Driver程序自动重启，使用特定的clustermanager实现。
+	2.重启时，从宕机的地方进行重启，通过检查点机制可以实现该功能。
+		//目录可以是本地，可以是hdfs.
+		jsc.checkpoint("d://....");
+		不再使用new方式创建SparkStreamContext对象，而是通过工厂方式JavaStreamingContext.getOrCreate()方法创建
+		上下文对象,首先会检查检查点目录，看是否有job运行，没有就new新的。
+
+        JavaStreamingContext jsc = JavaStreamingContext.getOrCreate("file:///d:/scala/check", new Function0<JavaStreamingContext>() {
+            public JavaStreamingContext call() throws Exception {
+                JavaStreamingContext jsc = new JavaStreamingContext(conf, Seconds.apply(2));
+                jsc.checkpoint("file:///d:/scala/check");
+                return jsc;
+            }
+        });
+	
+	3.编写容错测试代码,计算过程编写到Function0的call方法中。
+		package com.it18zhang.spark.java;
+
+		import org.apache.spark.SparkConf;
+		import org.apache.spark.api.java.Optional;
+		import org.apache.spark.api.java.function.FlatMapFunction;
+		import org.apache.spark.api.java.function.Function0;
+		import org.apache.spark.api.java.function.Function2;
+		import org.apache.spark.api.java.function.PairFunction;
+		import org.apache.spark.streaming.Duration;
+		import org.apache.spark.streaming.Seconds;
+		import org.apache.spark.streaming.api.java.JavaDStream;
+		import org.apache.spark.streaming.api.java.JavaPairDStream;
+		import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
+		import org.apache.spark.streaming.api.java.JavaStreamingContext;
+		import scala.Tuple2;
+
+		import java.util.ArrayList;
+		import java.util.Iterator;
+		import java.util.List;
+
+		/**
+		 * Created by Administrator on 2017/4/3.
+		 */
+		public class JavaSparkStreamingWordCountWindowsApp {
+			static JavaReceiverInputDStream sock;
+			public static void main(String[] args) throws Exception {
+				Function0<JavaStreamingContext> contextFactory = new Function0<JavaStreamingContext>() {
+					//首次创建context时调用该方法。
+					public JavaStreamingContext call() {
+						SparkConf conf = new SparkConf();
+						conf.setMaster("local[4]");
+						conf.setAppName("wc");
+						JavaStreamingContext jssc = new JavaStreamingContext(conf,new Duration(2000));
+						JavaDStream<String> lines = jssc.socketTextStream("localhost",9999);
+
+						/*******  变换代码放到此处 ***********/
+						JavaDStream<Long> dsCount = lines.countByWindow(new Duration(24 * 60 * 60 * 1000),new Duration(2000));
+						dsCount.print();
+						//设置检察点目录
+						jssc.checkpoint("file:///d:/scala/check");
+						return jssc;
+					}
+				};
+				//失败重建时会经过检查点。
+				JavaStreamingContext context = JavaStreamingContext.getOrCreate("file:///d:/scala/check", contextFactory);
+
+				context.start();
+				context.awaitTermination();
+			}
+		}
+
+
+
+机器学习
+--------------
+	1.监督学习
+		有训练数据集。规范数据。合规数据。产生推断函数.然后对新数据应用函数。
+		director actor edit 		Label
+
+	2.非监督学习
+		没有训练数据。
+		分组。
+
+	3.推荐
+		协同过滤.
+		猜测你喜欢.
+		电商。
+
+
+Spark机器学习库
+---------------------
+	[Estimator]
+		运行在包含了feature和label(结果)的dataFrame之上，对数据进行训练创建model。
+		该模型用于以后的预测。
+
+	[Transformer:]
+		将包含feature的Dataframe变换成了包含了预测的dataframe.
+		由Estimator创建的model就是Transformer。
+
+	[Parameter:]
+		Estimator和Transformer使用的数据，通常和机器学习的算法相关。
+		Spark API给出了一致性API针对算法。
+
+	[Pipeline:]
+		将Estimators和Transformers组合在一起，形成机器学习工作流.
+
+
+
+编写程序
+--------------
+	1.导入pom.xml
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-mllib_2.11</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+	2.程序
+		/**
+		  * Created by Administrator on 2017/4/8.
+		  */
+
+		import org.apache.spark.{SparkConf, SparkContext}
+		import org.apache.spark.ml.regression.LinearRegression
+		import org.apache.spark.ml.param.ParamMap
+		import org.apache.spark.ml.linalg.{Vector, Vectors}
+		import org.apache.spark.sql.{Row, SparkSession}
+
+		object SparkMLDemo1 {
+			def main(args: Array[String]): Unit = {
+				val sess = SparkSession.builder().appName("ml").master("local[4]").getOrCreate();
+				val sc = sess.sparkContext;
+				//数据目录
+				val dataDir = "file:///D:/downloads/bigdata/ml/winequality-white.csv"
+				//定义样例类
+				case class Wine(FixedAcidity: Double, VolatileAcidity: Double,
+								CitricAcid: Double, ResidualSugar: Double, Chlorides: Double,
+								FreeSulfurDioxide: Double, TotalSulfurDioxide: Double, Density: Double, PH:
+								Double, Sulphates: Double, Alcohol: Double, Quality: Double)
+
+				//变换
+				val wineDataRDD = sc.textFile(dataDir).map(_.split(";")).map(w => Wine(w(0).toDouble, w(1).toDouble,
+					w(2).toDouble, w(3).toDouble, w(4).toDouble, w(5).toDouble, w(6).toDouble, w(7).toDouble, w(8).toDouble
+					, w(9).toDouble, w(10).toDouble, w(11).toDouble))
+
+				import sess.implicits._
+
+				//转换RDD成DataFrame
+				val trainingDF = wineDataRDD.map(w => (w.Quality,
+					Vectors.dense(w.FixedAcidity, w.VolatileAcidity, w.CitricAcid,
+						w.ResidualSugar, w.Chlorides, w.FreeSulfurDioxide, w.TotalSulfurDioxide,
+						w.Density, w.PH, w.Sulphates, w.Alcohol))).toDF("label", "features")
+				//显式数据
+				trainingDF.show()
+				println("======================")
+
+				//创建线性回归对象
+				val lr = new LinearRegression()
+				//设置最大迭代次数
+				lr.setMaxIter(50)
+				//通过线性回归拟合训练数据，生成模型
+				val model = lr.fit(trainingDF)
+
+				//创建内存测试数据数据框
+				val testDF = sess.createDataFrame(Seq((5.0, Vectors.dense(7.4,
+					0.7, 0.0, 1.9, 0.076, 25.0, 67.0, 0.9968, 3.2, 0.68, 9.8)), (5.0,
+					Vectors.dense(7.8, 0.88, 0.0, 2.6, 0.098, 11.0, 34.0, 0.9978, 3.51, 0.56,
+						9.4)), (7.0, Vectors.dense(7.3, 0.65, 0.0, 1.2, 0.065, 15.0, 18.0, 0.9968,
+					3.36, 0.57, 9.5)))).toDF("label", "features")
+
+				testDF.show()
+
+				//创建临时视图
+				testDF.createOrReplaceTempView("test")
+				println("======================")
+				//利用model对测试数据进行变化，得到新数据框，查询features", "label", "prediction方面值。
+				val tested = model.transform(testDF).select("features", "label", "prediction");
+				tested.show();
+
+			}
+		}
+
+
+机器学习应用步骤
+----------------------
+	1.读取数据文件形成训练数据框
+	2.创建LinearRegression并设置参数
+	3.对训练数据进行模型拟合，完成评估管线.
+	4.创建包含测试数据的DataFrame，典型包含feature和label，可以通过比较预测标签和测试标签确认model是ok，
+	5.使用模型，对测试数据进行变换(应用模型),抽取feature ，label，predication.
+
+
+模型持久化
+-----------------
+	//保存
+	model.save("file:///d:/scala/model");
+
+
+	//加载
+	val model = LinearRegressionModel.load("file:///d:/scala/model");
+
+
+wine分类
+---------------
+	/**
+	  * Created by Administrator on 2017/4/8.
+	  */
+
+	import org.apache.spark.ml.classification.LogisticRegression
+	import org.apache.spark.ml.param.ParamMap
+	import org.apache.spark.ml.linalg.{Vector, Vectors}
+	import org.apache.spark.ml.regression.LinearRegressionModel
+	import org.apache.spark.sql.{Row, SparkSession}
+
+	object LogicRegressWineClassifyDemo {
+		def main(args: Array[String]): Unit = {
+			val sess = SparkSession.builder().appName("ml").master("local[4]").getOrCreate();
+			val sc = sess.sparkContext;
+			//数据目录
+			val dataDir = "file:///D:/downloads/bigdata/ml/winequality-white.csv"
+			//定义样例类
+			case class Wine(FixedAcidity: Double, VolatileAcidity: Double,
+							CitricAcid: Double, ResidualSugar: Double, Chlorides: Double,
+							FreeSulfurDioxide: Double, TotalSulfurDioxide: Double, Density: Double, PH:
+							Double, Sulphates: Double, Alcohol: Double, Quality: Double)
+
+			//变换
+			val wineDataRDD = sc.textFile(dataDir).map(_.split(";")).map(w => Wine(w(0).toDouble, w(1).toDouble,
+				w(2).toDouble, w(3).toDouble, w(4).toDouble, w(5).toDouble, w(6).toDouble, w(7).toDouble, w(8).toDouble
+				, w(9).toDouble, w(10).toDouble, w(11).toDouble))
+
+			import sess.implicits._
+
+			//转换RDD成DataFrame
+			val trainingDF = wineDataRDD.map(w => (if (w.Quality < 7) 0D else 1D,
+				Vectors.dense(w.FixedAcidity, w.VolatileAcidity, w.CitricAcid,
+					w.ResidualSugar, w.Chlorides, w.FreeSulfurDioxide, w.TotalSulfurDioxide,
+					w.Density, w.PH, w.Sulphates, w.Alcohol))).toDF("label", "features")
+
+			//创建线性回归对象
+			val lr = new LogisticRegression()
+			//设置最大迭代次数
+			lr.setMaxIter(10).setRegParam(0.01)
+			//
+			val model = lr.fit(trainingDF)
+			//创建测试Dataframe
+			val testDF = sess.createDataFrame(Seq((1.0,Vectors.dense(6.1, 0.32, 0.24, 1.5, 0.036, 43, 140, 0.9894, 3.36, 0.64, 10.7)),
+				(0.0, Vectors.dense(5.2, 0.44, 0.04, 1.4, 0.036, 38, 124, 0.9898, 3.29, 0.42, 12.4)),
+				(0.0,Vectors.dense(7.2, 0.32, 0.47, 5.1, 0.044, 19, 65, 0.9951, 3.38, 0.36, 9)),
+				(0.0, Vectors.dense(6.4, 0.595, 0.14, 5.2, 0.058, 15, 97, 0.991, 3.03, 0.41, 12.6)))
+			).toDF("label", "features")
+
+			//显式测试数据
+			testDF.show();
+
+
+			println("========================")
+			//预测测试数据(带标签),评测模型的质量。
+			testDF.createOrReplaceTempView("test")
+			val tested = model.transform(testDF).select("features", "label", "prediction")
+			tested.show();
+
+			println("========================")
+			//预测无标签的测试数据。
+			val predictDF = sess.sql("SELECT features FROM test")
+			//预测结果
+			val predicted = model.transform(predictDF).select("features", "prediction")
+			predicted.show();
+		}
+	}
+
+spam filter
+-----------------
+import org.apache.spark.ml.classification.LogisticRegression
+import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.sql.Row
+import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.feature.{HashingTF, Tokenizer,
+
+
+val training = spark.createDataFrame(Seq(
+							("you@example.com","hope you are well", 0.0),
+							("raj@example.com", "nice to hear from you",0.0),
+							("thomas@example.com", "happy holidays", 0.0),
+							("mark@example.com","see you tomorrow", 0.0),
+							("xyz@example.com", "save money",1.0),
+							("top10@example.com", "low interest rate",1.0),
+							("marketing@example.com", "cheap loan", 1.0)))
+							.toDF("email","message", "label")
+
+val test = spark.createDataFrame(Seq(
+				("you@example.com", "how are you"),
+				("jain@example.com", "hope doing well"),
+				("caren@example.com","want some money"),
+				("zhou@example.com", "secure loan"),
+				("ted@example.com","need loan"))).toDF("email", "message")
+
+val prediction = model.transform(test).select("email","message", "prediction")	
+
+垃圾邮件过滤
+----------------
+	/**
+	  * Created by Administrator on 2017/4/8.
+	  */
+
+	import org.apache.spark.ml.classification.LogisticRegression
+	import org.apache.spark.ml.param.ParamMap
+	import org.apache.spark.ml.linalg.{Vector, Vectors}
+	import org.apache.spark.sql.{Row, SparkSession}
+	import org.apache.spark.ml.Pipeline
+	import org.apache.spark.ml.feature.{HashingTF, RegexTokenizer, StopWordsRemover, Tokenizer, Word2Vec}
+
+	object SpamFilterDemo1 {
+		def main(args: Array[String]): Unit = {
+			val sess = SparkSession.builder().appName("ml").master("local[4]").getOrCreate();
+			val sc = sess.sparkContext;
+
+			//垃圾邮件训练数据
+			val training = sess.createDataFrame(Seq(
+				("you@example.com", "hope you are well", 0.0),
+				("raj@example.com", "nice to hear from you", 0.0),
+				("thomas@example.com", "happy holidays", 0.0),
+				("mark@example.com", "see you tomorrow", 0.0),
+				("dog@example.com", "save loan money", 1.0),
+				("xyz@example.com", "save money", 1.0),
+				("top10@example.com", "low interest rate", 1.0),
+				("marketing@example.com", "cheap loan", 1.0)))
+				.toDF("email", "message", "label")
+
+			//分词器,指定输入列，生成输出列
+			val tokenizer = new Tokenizer().setInputCol("message").setOutputCol("words")
+			//哈希词频
+			val hashingTF = new HashingTF().setNumFeatures(1000).setInputCol("words").setOutputCol("features")
+			//创建逻辑回归对象
+			val lr = new LogisticRegression().setMaxIter(10).setRegParam(0.01)
+			//设置管线
+			val pipeline = new Pipeline().setStages(Array(tokenizer,hashingTF, lr))
+			//拟合，产生模型
+			val model = pipeline.fit(training)
+			//测试数据，评判model的质量
+			val test = sess.createDataFrame(Seq(
+				("you@example.com", "ab how are you"),
+				("jain@example.com", "ab hope doing well"),
+				("caren@example.com", "ab want some money"),
+				("zhou@example.com", "ab secure loan"),
+				("ted@example.com", "ab need loan"))).toDF("email", "message")
+
+			//对测试数据进行模型变换,得到模型的预测结果
+			val prediction = model.transform(training).select("email", "message", "prediction")
+			//prediction.show()
+
+			//类似于切割动作。
+			val wordsDF = tokenizer.transform(training)
+			//wordsDF.show()
+
+			val featurizedDF = hashingTF.transform(wordsDF)
+			featurizedDF.show()
+
+
+
+		}
+	}
+

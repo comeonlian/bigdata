@@ -1,0 +1,456 @@
+scala
+-------------
+	java语句脚本化。
+
+	object			//静态成员
+	class			//class
+	trait			//接口
+	def xxx(a:Int):Unit{}
+	val				//常量
+	var				//变量
+
+	map(""->"",v->k)//
+
+	(1,2,3,4,65)	//tuple,<= 22
+
+	while(){
+	}
+
+	for(x <- 1 to 10 if xxxx) yield
+
+	x = 100 ;
+	Unit			//()
+	val a:Unit = ();//defer推段。
+	函数的递归调用。
+
+
+scalac xxx.scala
+scala xxx.scala			//
+
+new Array(100)			//100个元素
+Array(100)				//1个元素，值是100，apply();
+
+"hello"(1)				//charAt "hello".apply(1);
+
+object					//
+companions object		//和类同名,必须定义在一个scala文件中。
+package object			//package.class,
+
+class Person(.....){
+	def this(...){
+		this();
+	}
+}
+
+
+扩展
+----------------
+	class Dog extends Animal{
+		//重写,覆盖
+		//overload
+		override def run()={...}
+	}
+
+类型检查和转换
+---------------
+	$scala>class Animal{}
+	$scala>class Dog extends Animal{}
+	$scala>val d = new Dog();
+	$scala>d.isInstanceOf[Animal]			//true,===> instanceOf
+	$scala>val a = d.asInstanceOf[Animal]	//强转,===> (Animal)d
+
+	//得带对象的类
+	$scala>d.getClass						//d.getClass();
+	$scala>d.getClass == classOf[Dog]		//精确匹配
+
+	$scala>class Animal(val name:String){}
+	$scala>class Dog(name:String,val age:Int) extends Animal(name){}
+
+	//抽象类
+	$scala>abstract class Animal(val name:String){
+		//抽象字段，没有初始化。
+		val id:Int  ;
+		//抽象方法，没有方法体，不需要抽象关键字修饰。
+		def run() ;
+	}
+
+
+scala类型树
+------------------
+	Null		//
+	Nothing		//
+
+	Any
+	 |
+	/|\
+     |------------AnyVal <|------Int|Boolean|...|Unit
+     |------------AnyRef <|------class ...
+
+文件
+----------------
+	import scala.io.Source ;
+	/**
+	  * Created by Administrator on 2017/4/18.
+	  */
+	object FileDemo {
+		def main(args: Array[String]): Unit = {
+			val s = Source.fromFile("d:/hello.txt") ;
+			val lines = s.getLines();
+			for(line <- lines){
+				println(line)
+			}
+		}
+	}
+	
+	//
+	scala.io.Source.fromFile(...).mkString()
+
+	//通过正则
+	 val str = Source.fromFile("d:/hello.txt").mkString
+			val it = str.split("\\s+")
+			for(i <- it){
+				println(i)
+			}
+		
+
+正则表达式
+------------------
+	<a href="xxkdkdkdkdkd">
+
+
+
+trait
+-----------------
+	如果只有一个trait使用extends进行扩展，如果多个，使用with对剩余的trait进行扩展。
+	trait logger1{
+		def log1() = println("hello log1");
+	}
+
+	trait logger2{
+		def log2() = println("hello log2");
+	}
+	
+	class Dog extends logger1 with logger2{
+		
+	}
+
+
+	//trait之间也存在扩展。
+	trait logger1{
+		def log1() = println("hello log1");
+	}
+	trait logger2 {
+	}
+	trait logger3 extends logger2 with logger1{
+	}
+
+	//with trait是需要对每个trait都是用with
+	class xxx extends A with T1 with T2 with ...{
+		...
+	}
+
+
+	//自身类型
+	trait logger{
+		this:Dog =>
+		def run() = println("run....")
+	}
+
+	trait Dog {
+		
+	}
+
+	trait Jing8 extends Dog with logger{
+		
+	}
+
+
+	class Cat extends logger{
+		
+	}
+
+操作符
+-------------------
+	//中置操作符
+	scala> 1 + 2			//
+	scala> 1.+(2)			//
+
+	//单元操作符
+	scala> 1 toString		//+: -:取反 !:boolean取反 ~:按位取反
+
+	//赋值操作符
+	$scala>+= / -= *= / /=
+
+
+	//:表示右结合,只有:结尾的操作符是右结合,优先级从右侧开始
+	scala>val l = Nil		//构造空集合.
+	scala>1::2::Nil			//1::(2::Nil)
+	scala>Nil.::(2)
+
+apply()/update()
+------------------
+	Array(100)			//Array.apply(100);
+	Array(100) = 200	//Array.update(200)
+
+unapply(),是apply的逆向过程
+------------------
+	//定义类
+	class Fraction(val n:Int,val d:Int){
+	}
+
+	object Fraction{
+		//通过
+		def apply(n : Int,d:Int)= new Fraction(n,d) 
+		//逆向过程
+		def unapply(f:Fraction) = Some(f.n,f.d)
+	}
+
+	scala>val f = Fraction(1,2)			//apply(...)
+	scala>val Fraction(a,b) = f			//unapply(...)
+
+高阶函数
+---------------------
+	scala>def add(a,b) = a + b
+
+	scala>val f = add _					//将函数赋值给一个变量,函数类型变量。
+
+
+	scala>def multi(n:Int) = n * 2
+	scala>def f = multi _				//_ 表示取出函数本省
+	scala>Array(1,2,3,4).map(f)
+	
+	//匿名函数
+	scala>(n:Double)=>3 * n				//
+	scala>val f = (n:Double)=>3 * n
+	scala>Array(1,2,3,4).map((x) => x * 3);
+	scala>Array(1,2,3,4).map{(x) => x * 3};
+
+	//遍历数组时，输出元素值，每个元素平方返回。
+	
+
+	f1:add
+	f2:sub
+	
+	//
+	call(a:Int,b:Int,f1..,f2..){
+		if(a > 0) ===> add
+		if(a <= 0) 
+
+		return f1 / f2 ;
+	}
+	
+	//
+	call(1,2,fadd,sub) = 3
+	call(-1,2,fadd,sub) = -3
+
+	//高阶函数
+	def call(a:Int,b:Int,f1:(Int,Int)=>Int,f2:(Int,Int)=>Int)={
+		if(a > 0){
+			f1(a,b) ;
+		}
+		else{
+			f2(a,b) ;
+		}
+	}
+	def add(a:Int,b:Int) = a + b
+	def sub(a:Int,b:Int) = a- b
+
+	val f1 = add _
+
+	val f2 = sub _
+
+	call(1,2,f1,f2)			//3
+	call(1,2,add _ ,sub _)	//
+	call(1,2,add,sub)	//
+
+	//call函数提升
+	call():{
+		if(a > 0){
+			f1(a,b) ;
+		}
+		else{
+			f2(a,b) ;
+		}
+
+		//y = []x
+	
+	}
+
+	系数 : y = 2x
+
+	val f = call(1,2,f1,f2)
+	f(100) = 300 ;
+
+	call(1,2,add _,sub _)(100) = 300
+
+	def call(a:Int,b:Int,f1:(Int,Int)=>Int,f2:(Int,Int)=>Int)= {
+		var n = 0 ;
+		if(a > 0){
+			n = f1(a,b) ;
+		}
+		else{
+			n = f2(a,b) ;
+		}
+
+		//
+		def multi(x:Int) = x * n ;
+		multi _
+	}
+	
+	//
+	call(1,2,(a:Int,b:Int)=>a + b , (a:Int,b:Int)=> a- b)(100)
+	call(1,2,a,b=>a + b , (a,b)=> a- b)(100)					//wrong
+
+	//定义高阶函数
+	def valueAt(f:(Double)=>Double) = f(0.25)
+
+	//
+	valueAt(cail _)
+
+	//              参数       = 函数体(函数)
+	def mulby(factor : Double) = (x:Double) => x * factor
+	mulby(2)
+	
+
+	//函数推断
+	def valueAt(f:(Double)=>Double) = f(0.25)
+	valueAt((x:Double)=>x * 3)				//定义类型
+	valueAt((x)=>x * 3)						//推断类型
+	valueAt(x=>x * 3)						//省略()
+	valueAt(x=>x * 3)						//省略()
+	valueAt(3 * _)							//参数在右侧出现1次，就可以使用_代替。
+
+	//高级函数
+	scala>val arr = Array(1,2,3,4)
+	scala>arr.map(2 * _);					//每个元素x2
+	scala>arr.map((e:Int)=> e * 2);			//每个元素x2
+	scala>arr.map(_ * 2);					//每个元素x2
+
+	//输出三角形
+	scala>(1 to 20).map("*" * _).foreach(println)
+
+	//hdfs，分布式存储
+
+	//reduceLeft,有左至右
+	//1,2,3 ==> (1 - 2) -3)	= -4
+
+	MR:MapTask + reduceTask,映射化简.
+
+	//reduceRight,由右至左
+	//1,2,3 ==>1 - (2 - 3)= 2
+	//1,2,3,4 ==> 1 - (2 - (3 - 4)) = -2
+	//1,2,3,4 ==> 1 - (2 - (3 - 4)) = -2
+
+
+柯里化
+------------------
+	scala>def mul(a:Int,b:Int) = a  * b;
+	scala>mul(1,2)
+
+	scala>def mulone(a:Int) = {(x:Int) => a * x ;}
+	scala>mulone(1)(2)
+
+
+//控制抽象
+-----------------
+	//定义过程，启动分线程执行block代码.
+	def newThread(block :()=>Unit){
+		new Thread(){
+			override def run(){
+				block() ;
+			}
+		}.start();
+	}
+
+	newThread(=>{
+					(1 to 10).foreach(e => {
+												val tname = Thread.currentThread.getName();
+												println(tname + " : " + e) ;
+											})
+				  }
+	) ;
+
+	//省略()
+	def newThread(block: =>Unit){
+		new Thread(){
+			override def run(){
+				block ;
+			}
+		}.start();
+	}
+	//
+	newThread{
+					(1 to 10).foreach(e => {
+												val tname = Thread.currentThread.getName();
+												println(tname + " : " + e) ;
+											})
+				  };
+
+	//
+
+
+
+集合
+-------------
+	//Nil
+	scala>1::2::Nil				//Nil空集合
+	scala>var list = List(2,4)
+	scala>9::list
+
+	scala>def sum(list:List[Int]):Int = {
+				if (list == Nil) 0 else list.head + sum(list.tail)
+			}
+
+
+	//通过模式匹配实现sum求和。
+	def sum(list:List[Int]):Int= list match{
+		case Nil => 0
+		case a::b=> a + sum(b) 
+	}
+
+	//添加删除元素操作符
+
+	scala>val set = Set(1,2,3)
+	scala>set + (1,2,3,5)
+	scala>set - (1,2,3,5)
+	
+	scala>val l1 = List(1,2)
+	scala>val l2 = List(3,4)
+	scala>l1 ++ l2				//1234 ::
+	scala>l1 ++: l2				//1234 === :::
+
+	scala>val s1 = Set(1,2,3)
+	scala>val s2 = Set(2,3,4)
+	scala>s1 | s2				//并集
+	scala>s1 & s2				//交集
+	scala>s1 &~ s2				//差集(1,2,3) - (2,3,4) = (1)
+
+	// += 操纵的是可变集合,操纵一个元素
+	// ++= 操纵的是可变集合,操纵集合
+	// +: 操纵的是不可变集合，产生新集合
+	scala>import scala.collection.mutable.{Set => SSet}
+
+	scala>buf.take(2)			//提取前2个元素
+	scala>buf.drop(2)			//删除前2个元素
+	scala>buf.splitAt(2)		//在指定位置进行切割，形成两个集合。
+	scala>val b1 = ArrayBuffer(1,2,3)
+	scala>val b2 = ArrayBuffer(3,4,5,6,)
+	scala>b1.zip(b2)			//(1,3)(2,4)(3,5)
+	scala>b1.zipAll(b2,-1,-2)	//(1,3)(2,4)(3,5)(-1,-2)
+	scala>b1.zipWithIndex()		//(,0)(,1)(,2)(,3)		//元素和自己的索引形成tuple.
+
+	(0 - 1) - 7 - 2 - 9			//-19
+	1  - (7 - (2 - (9 - 0))_	//-13
+	..
+
+
+
+
+
+
+
+
+
+
+
+

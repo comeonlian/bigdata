@@ -1,0 +1,410 @@
+r = urllib.request.urlopen()
+data = r.read()  //bytes
+r.close();
+
+f = open(,'wb')
+f.write(data);
+f.close();
+
+pattern = "<a\s*href="([...])">" ;
+re.finditer()
+
+
+python + hbase
+------------------
+	0.启动hbase集群
+		如果时钟不同步。
+		$>su root
+		$>xcall.sh "ntpdate asia.pool.ntp.org"
+
+	1.启动hbase的thriftserver，满足和第三方应用通信。
+		$>hbase-daemon.sh start thrift2
+
+	2.查看webui
+		http://s201:9095/		//webui端口
+								//9090 rpc端口
+	3.下载windows下thrift的编译器,不需要安装，仅仅是个工具。
+		thrift-0.10.0.exe
+
+	4.下载并安装thrift的python模块.
+		4.1)下载文件
+			thrift-0.10.0.tar.gz
+		4.2)tar开文件
+		4.3)进入目录
+			cmd>cd thrift-0.10.0\lib\py
+			cmd>setup.py install
+		4.4)
+	5.找到hbase.thrift文件进行编译，产生python文件。
+		
+	6.使用以下命令进行编译
+		cmd>thrift-0.10.0.exe -o ./out -gen py hbase.thrift
+
+	7.创建idea的下的新模块
+	
+	8.创建python文件Demo1.py
+	9.复制生成python文件到idea下。
+		mythrift/hbase/..
+	
+	10.
+from thrift import Thrift
+from thrift.transport import TSocket
+from thrift.transport import TTransport
+from thrift.protocol import TBinaryProtocol
+
+
+
+
+spark使用python进行交互
+-------------------------
+	1.本地模式
+		移除spark/conf/core-site.xml | hdfs-site.xml | hive-site.xml文件
+		[scala]
+		val rdd = sc.makeRDD(1 to 10)
+		rdd.map(e=>(e,1))
+
+		[python]
+		arr = [1,2,3,4]
+		rdd = sc.parellize(arr);
+		rdd.map(lambda e : (e,1))
+	2.编程pytyon代码
+		# -*- encoding=utf-8 -*-
+
+		import os
+
+		#导入thrift的python模块
+		from thrift import Thrift
+		from thrift.transport import TSocket
+		from thrift.transport import TTransport
+		from thrift.protocol import TBinaryProtocol
+
+		#导入自已编译生成的hbase python模块
+		from mythrift.hbase import THBaseService
+		from mythrift.hbase.ttypes import *
+		from mythrift.hbase.ttypes import TResult
+
+
+		#创建Socket连接，到s201:9090
+		transport = TSocket.TSocket('s201', 9090)
+		transport = TTransport.TBufferedTransport(transport)
+		protocol = TBinaryProtocol.TBinaryProtocol(transport)
+		client = THBaseService.Client(protocol)
+
+		#打开传输端口
+		transport.open()
+
+		#put操作
+		# table = b'ns1:t1'
+		# row = b'row1'
+		# v1 = TColumnValue(b'f1', b'id', b'101')
+		# v2 = TColumnValue(b'f1', b'name', b'tomas')
+		# v3 = TColumnValue(b'f1', b'age', b'12')
+		# vals = [v1, v2, v3]
+		# put = TPut(row, vals)
+		# client.put(table, put)
+		# print("okkkk!!")
+		# transport.close()
+
+		#get
+		# table = b'ns1:t1'
+		# rowkey=b"row1"
+		# col_id = TColumn(b"f1",b"id")
+		# col_name = TColumn(b"f1",b"name")
+		# col_age = TColumn(b"f1",b"age")
+		#
+		# cols = [col_id,col_name,col_age]
+		# get = TGet(rowkey,cols)
+		# res = client.get(table,get)
+		# print(bytes.decode(res.columnValues[0].qualifier))
+		# print(bytes.decode(res.columnValues[0].family))
+		# print(res.columnValues[0].timestamp)
+		# print(bytes.decode(res.columnValues[0].value))
+
+		#delete
+		# table = b'ns1:t1'
+		# rowkey = b"row1"
+		# col_id = TColumn(b"f1", b"id")
+		# col_name = TColumn(b"f1", b"name")
+		# col_age = TColumn(b"f1", b"age")
+		# cols = [col_id, col_name]
+		#
+		# #构造删除对象
+		# delete = TDelete(rowkey,cols)
+		# res = client.deleteSingle(table, delete)
+		# transport.close()
+		# print("ok")
+
+		# table = b'ns1:calllogs'
+		# startRow = b'00,15778423030,20170208043827,0,17731088562,570'
+		# stopRow = b'17,15338595369,20170410132142,0,15732648446,512'
+		# dur = TColumn(b"f1", b"callDuration")
+		# time = TColumn(b"f1", b"callTime")
+		# caller = TColumn(b"f1", b"caller")
+		# callee = TColumn(b"f1", b"callee")
+		# cols = [dur, time,caller,callee]
+		#
+		# scan = TScan(startRow=startRow,stopRow=stopRow,columns=cols)
+		# r = client.getScannerResults(table,scan,100);
+		# for x in r:
+		#     print("============")
+		#     print(bytes.decode(x.columnValues[0].qualifier))
+		#     print(bytes.decode(x.columnValues[0].family))
+		#     print(x.columnValues[0].timestamp)
+		#     print(bytes.decode(x.columnValues[0].value))
+
+改造爬虫，使用hbase存放网页
+------------------------------
+	1.创建hbase表pages
+		$hbase>create 'ns1:pages','f1'
+	2.PageDao
+		import os
+
+		# 导入thrift的python模块
+		from thrift import Thrift
+		from thrift.transport import TSocket
+		from thrift.transport import TTransport
+		from thrift.protocol import TBinaryProtocol
+
+		# 导入自已编译生成的hbase python模块
+		from mythrift.hbase import THBaseService
+		from mythrift.hbase.ttypes import *
+		from mythrift.hbase.ttypes import TResult
+
+		import base64
+
+		# 创建Socket连接，到s201:9090
+		transport = TSocket.TSocket('s201', 9090)
+		transport = TTransport.TBufferedTransport(transport)
+		protocol = TBinaryProtocol.TBinaryProtocol(transport)
+		client = THBaseService.Client(protocol)
+
+		#定义函数，保存网页
+		def savePage(url,page):
+			#
+			transport.open()
+			#对url进行base64编码，形成bytes,作为rowkey
+			urlBase64Bytes = base64.encodebytes(url.encode("utf-8"))
+
+			# put操作
+			table = b'ns1:pages'
+			rowkey = urlBase64Bytes
+			v1 = TColumnValue(b'f1', b'page', page)
+			vals = [v1]
+			put = TPut(rowkey, vals)
+			client.put(table, put)
+			transport.close()
+
+		#判断网页是否存在
+		def exists(url):
+			transport.open()
+			# 对url进行base64编码，形成bytes,作为rowkey
+			urlBase64Bytes = base64.encodebytes(url.encode("utf-8"))
+			print(urlBase64Bytes)
+
+			table = b'ns1:pages'
+			rowkey = urlBase64Bytes
+			col_page = TColumn(b"f1",b"page")
+
+			cols = [col_page]
+			get = TGet(rowkey,cols)
+			res = client.get(table, get)
+			transport.close()
+			return res.row is not None
+	3.Crawler.py
+		# -*- encoding=utf-8 -*-
+
+		import urllib.request
+		import os
+		import re
+		import PageDao
+
+		#下载网页方法
+		def download(url):
+			#判断当前的网页是否已经下载
+			resp = urllib.request.urlopen(url)
+			pageBytes = resp.read()
+			resp.close
+
+			if not PageDao.exists(url):
+				PageDao.savePage(url, pageBytes);
+
+			try:
+				#解析网页的内容
+				pageStr = pageBytes.decode("utf-8");
+				#解析href地址
+				pattern = u'<a[\u0000-\uffff&&^[href]]*href="([\u0000-\uffff&&^"]*?)"'
+				res = re.finditer(pattern, pageStr)
+				for r in res:
+					addr = r.group(1);
+					print(addr)
+					if addr.startswith("//"):
+						addr = addr.replace("//","http://");
+
+					#判断网页中是否包含自己的地址
+					if addr.startswith("http://") and url != addr and (not PageDao.exists(addr)):
+						download(addr) ;
+
+			except Exception as e:
+				print(e)
+				print(pageBytes.decode("gbk", errors='ignore'));
+				return ;
+
+		download("http://jd.com");
+
+	
+
+pip安装python的模块
+-----------------------
+	1.numpy
+		cmd>pip install -i https://pypi.tuna.tsinghua.edu.cn/simple numpy
+
+	2.scipy
+		pip install -i https://pypi.tuna.tsinghua.edu.cn/simple scipy
+
+	3.matplotpy
+		pip install -i https://pypi.tuna.tsinghua.edu.cn/simple matplotlib
+		python -m pip install -U pip setuptools
+		python -m pip install matplotlib
+
+
+centos
+---------------------
+	1.安装gnome-desktop
+		a)挂载CentOS-7-x86_64-DVD-1511.iso到光驱。
+			$>sudo mount /dev/cdrom /mnt/cdrom
+		b)本地安装gnome-desktop-xxx.rpm
+			$>sudo yum localinstall gnome-desktop-xxx.rpm
+
+		c)联网安装GNOME Desktop
+			$>sudo yum groupinstall "GNOME Desktop"
+
+		d)修改centos的启动模式
+			$>sudo systemctl set-default graphical.target
+
+		e)查看启动模式
+			$>sudo systemctl get-default
+
+		f)启动桌面系统
+			$>sudo startx
+
+		g)安装完成桌面系统后，如果出现read-only filesystem的错误.
+			$>sudo mount -o remount rw /
+
+
+centosX11 + putty实现远程访问centos的桌面程序
+----------------------------------------------
+	1.配置centos x11转发服务.
+		[/etc/ssh/sshd_config]
+		...
+		X11Forwarding yes
+		...
+	2.重启sshd服务
+		$>sudo service sshd restart
+		
+	3.安装windows的Xming-6-9-0-31-setup.exe软件。
+		D:\downloads\tool\Mtputty\Xming-6-9-0-31-setup.exe
+
+	4.启动Xming服务器
+		...
+	5.配置putty
+		mtputty -> s201 -> run putty config -> SSH -> X11 -> enable X11 forwarding  -> save
+															 display:localhost:0
+	6.启动s201,输入firefox,在windows窗口中显式firefox浏览器。
+
+
+
+使用python实现spark的数据分析
+-----------------------------
+	#导入sql
+	from pyspark.sql import Row
+	import matplotlib.pyplot as plt
+	import numpy as np
+	import pylab as P
+	plt.rcdefaults()
+	dataDir ="file:///home/centos/ml-data/ml-1m/users.dat"
+	lines = sc.textFile(dataDir)
+	splitLines = lines.map(lambda l: l.split("::"))
+	usersRDD = splitLines.map(lambda p: Row(id=p[0],gender=p[1],age=int(p[2]), occupation=p[3], zipcode=p[4]))
+	usersDF = spark.createDataFrame(usersRDD)
+	usersDF.createOrReplaceTempView("users")
+	usersDF.show()
+
+
+	#生成直方图
+	ageDF = spark.sql("SELECT age FROM users")
+	ageList = ageDF.rdd.map(lambda p: p.age).collect()
+	ageDF.describe().show()
+
+	plt.hist(ageList)
+	plt.title("Age distribution of the users\n")
+	plt.xlabel("Age")
+	plt.ylabel("Number of users")
+	plt.show(block=False)
+
+	#密度图
+	from scipy.stats import gaussian_kde
+	density = gaussian_kde(ageList)
+	xAxisValues = np.linspace(0,100,1000)
+	density.covariance_factor = lambda : .5
+	density._compute_covariance()
+	plt.title("Age density plot of the users\n")
+	plt.xlabel("Age")
+	plt.ylabel("Density")
+	plt.plot(xAxisValues, density(xAxisValues))
+	plt.show(block=False)
+
+	#生成嵌套子图
+	plt.subplot(121)
+	plt.hist(ageList)
+	plt.title("Age distribution of the users\n")
+	plt.xlabel("Age")
+	plt.ylabel("Number of users")
+	plt.subplot(122)
+	plt.title("Summary of distribution\n")
+	plt.xlabel("Age")
+	plt.boxplot(ageList, vert=False)
+	plt.show(block=False)
+
+	#柱状图
+	occ10 = spark.sql("SELECT occupation, count(occupation) as usercount FROM users GROUP BY occupation ORDER BY usercount DESC LIMIT 10")
+	occ10.show()
+
+	occTuple = occ10.rdd.map(lambda p:(p.occupation,p.usercount)).collect()
+	occList, countList = zip(*occTuple)
+	occList
+
+	y_pos = np.arange(len(occList))
+	plt.barh(y_pos, countList, align='center', alpha=0.4)
+	plt.yticks(y_pos, occList)
+	plt.xlabel('Number of users')
+	plt.title('Top 10 user types\n')
+	plt.gcf().subplots_adjust(left=0.15)
+	plt.show(block=False)
+
+
+	#堆栈条形图
+	occGender = spark.sql("SELECT occupation, gender FROM users")
+	occGender.show()
+
+	occCrossTab = occGender.stat.crosstab("occupation","gender")
+	occupationsCrossTuple = occCrossTab.rdd.map(lambda p:(p.occupation_gender,p.M, p.F)).collect()
+	occList, mList, fList = zip(*occupationsCrossTuple)
+	N = len(occList)
+	ind = np.arange(N)
+	width = 0.75
+	p1 = plt.bar(ind, mList, width, color='r')
+	p2 = plt.bar(ind, fList, width, color='y', bottom=mList)
+	plt.ylabel('Count')
+	plt.title('Gender distribution by occupation\n')
+	plt.xticks(ind + width/2., occList, rotation=90)
+	plt.legend((p1[0], p2[0]), ('Male', 'Female'))
+	plt.gcf().subplots_adjust(bottom=0.25)
+	plt.show(block=False)
+
+	#饼图
+	occupationsBottom10 = spark.sql("SELECT occupation,count(occupation) as usercount FROM users GROUP BY occupation ORDER BY usercount LIMIT 10")
+	occupationsBottom10Tuple = occupationsBottom10.rdd.map(lambda p:(p.occupation,p.usercount)).collect()
+	occupationsBottom10List, countBottom10List =zip(*occupationsBottom10Tuple)
+	explode = (0, 0.3, 0.2, 0.15,0.1,0,0,0,0,0.1)
+	plt.pie(countBottom10List, explode=explode,labels=occupationsBottom10List, autopct='%1.1f%%', shadow=True,startangle=90)
+	plt.title('Bottom 10 user types\n')
+	plt.show(block=False)
