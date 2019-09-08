@@ -14,6 +14,9 @@
         <module>storm-00</module>
         <module>storm-01</module>
         <module>storm-02</module>
+        <module>storm-03</module>
+        <module>storm-04</module>
+        <module>storm-05</module>
     </modules>
 
 
