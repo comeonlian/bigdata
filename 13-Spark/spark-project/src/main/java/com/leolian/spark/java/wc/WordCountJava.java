@@ -1,4 +1,4 @@
-package com.leolian.spark.java.demo;
+package com.leolian.spark.java.wc;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
